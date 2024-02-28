@@ -6,13 +6,15 @@
 #include <cstdint>
 #include <cstddef>
 #include <cstdio>
+#include <mutex>
 #include <type_traits>
+#include <__fwd/string_view.h>
 
 namespace rtml {
     static_assert(std::numeric_limits<float>::is_iec559);
     static_assert(std::numeric_limits<double>::is_iec559);
 
-    class tensor;
+#define rtml_log(msg, ...) std::printf("[RTML Runtime] " msg, ##__VA_ARGS__);
 
     template <typename T>
     concept is_pool_allocateable = requires {
@@ -31,7 +33,7 @@ namespace rtml {
         [[nodiscard]] auto alloc_raw(std::size_t size) noexcept -> void*;
         [[nodiscard]] auto alloc_raw(std::size_t size, std::size_t align) noexcept -> void*;
         template <typename T, typename... Args> requires
-            is_pool_allocateable<T> && std::is_constructible_v<T, Args...>
+            is_pool_allocateable<T> // && std::is_constructible_v<T, std::decay_t<Args>...>
         [[nodiscard]] auto alloc(Args&&... args) noexcept(std::is_nothrow_constructible_v<T, Args...>) -> T* {
             T* p {static_cast<T*>(alloc_raw(sizeof(T), alignof(T)))};
             return new (p) T{std::forward<Args>(args)...};
@@ -44,6 +46,55 @@ namespace rtml {
         std::uint8_t* m_top {};
         std::uint8_t* m_bot {};
         std::size_t m_num_allocs {};
+    };
+
+    class context {
+    public:
+        enum class compute_device {
+            auto_select = 0,
+            cpu,
+            gpu,
+            tpu,
+            $count
+        };
+        static constexpr std::array<const char*, static_cast<std::size_t>(compute_device::$count)> k_compute_device_names {
+            "Auto Select",
+            "CPU",
+            "GPU",
+            "TPU"
+        };
+
+        [[nodiscard]] static auto create(
+            std::string&& name,
+            compute_device device,
+            std::size_t pool_mem
+        ) -> std::shared_ptr<context>;
+        [[nodiscard]] static auto exists(const std::string& name) -> bool;
+        [[nodiscard]] static auto get(const std::string& name) -> std::shared_ptr<context>;
+        [[nodiscard]] static auto get_all() -> const std::unordered_map<std::string, std::shared_ptr<context>>&;
+
+        context(const context&) = delete;
+        context(context&&) = delete;
+        auto operator=(const context&) -> context& = delete;
+        auto operator=(context&&) -> context& = delete;
+        virtual ~context() = default;
+
+        [[nodiscard]] static auto global_init() -> bool;
+        static auto global_shutdown() -> void;
+
+        [[nodiscard]] auto name() const noexcept -> const std::string& { return m_name; }
+        [[nodiscard]] auto device() const noexcept -> compute_device { return m_device; }
+        [[nodiscard]] auto pool() const noexcept -> const pool& { return m_pool; }
+
+    private:
+        static inline std::unordered_map<std::string, std::shared_ptr<context>> s_contexts;
+        static inline std::mutex s_contexts_mutex;
+        const std::string m_name;
+        const compute_device m_device;
+        const class pool m_pool;
+
+    protected:
+        context(std::string&& name, compute_device device, std::size_t pool_mem);
     };
 
     class tensor final {
@@ -80,6 +131,7 @@ namespace rtml {
         ) -> tensor*;
 
     private:
+        friend class pool;
         tensor(
             pool& pool,
             stype type,

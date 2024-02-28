@@ -3,9 +3,62 @@
 #include "rtml.hpp"
 
 #include <cassert>
+#include <iostream>
 
 namespace rtml {
+    struct context_proxy final : context {
+        template <typename... Args>
+        explicit context_proxy(Args&&... args) : context{std::forward<Args>(args)...} {}
+    };
+
+    auto context::create(
+        std::string&& name,
+        const compute_device device,
+        const std::size_t pool_mem
+    ) -> std::shared_ptr<context> {
+        std::unique_lock lock {s_contexts_mutex};
+        return s_contexts.emplace(std::string{name}, std::make_shared<context_proxy>(std::move(name), device, pool_mem)).first->second;
+    }
+
+    auto context::exists(const std::string& name) -> bool {
+        std::unique_lock lock {s_contexts_mutex};
+        return s_contexts.contains(name);
+    }
+
+    auto context::get(const std::string& name) -> std::shared_ptr<context> {
+        std::unique_lock lock {s_contexts_mutex};
+        return s_contexts.at(name);
+    }
+
+    auto context::get_all() -> const std::unordered_map<std::string, std::shared_ptr<context>>& {
+        return s_contexts;
+    }
+
+    auto context::global_init() -> bool {
+        std::iostream::sync_with_stdio(false);
+        rtml_log("RTML runtime initialized\n");
+        std::fflush(stdout);
+        return true;
+    }
+
+    auto context::global_shutdown() -> void {
+        rtml_log("RTML runtime shutdown\n");
+        std::fflush(stdout);
+    }
+
+    context::context(std::string&& name, compute_device device, const std::size_t pool_mem)
+        : m_name{std::move(name)}, m_device{device}, m_pool{pool_mem} {
+        rtml_log(
+            "Creating context '%s', Device: '%s', Pool memory: %.01f MiB\n",
+            m_name.c_str(),
+            context::k_compute_device_names[static_cast<std::size_t>(m_device)],
+            static_cast<double>(pool_mem)/static_cast<double>(1ull << 20)
+        );
+    }
+
     pool::pool(const std::size_t size) : m_size{size}, m_storage{new std::uint8_t[size]} {
+        if (!size) [[unlikely]]
+            std::abort();
         m_top = m_storage.get();
         m_bot = m_top + size;
     }
@@ -38,7 +91,7 @@ namespace rtml {
 
     auto tensor::create(
         pool& pool,
-        stype type,
+        const stype type,
         const std::initializer_list<const std::int64_t> dims,
         tensor* slice,
         std::size_t slice_offset
