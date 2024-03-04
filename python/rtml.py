@@ -1,18 +1,21 @@
 # Copyright Mario "Neo" Sieg 2024. All rights reserved. mario.sieg.64@gmail.com
 
-from ctypes import *
+import os
+import sys
 from enum import Enum
 
-from rtml_ffi import rtml_load_ffi
+# Import generated RTML runtime bindings
+from rtml_runtime import *
 
-rtml = rtml_load_ffi()
+# Check if the dynamic library is loaded by testing for: rtml_global_init
+assert rtml_global_init is not None, "Failed to load the RTML dynamic library"
 
 def global_init() -> bool:
-    return rtml.rtml_global_init()
+    return rtml_global_init()
 
 
 def global_shutdown():
-    rtml.rtml_global_shutdown()
+    rtml_global_shutdown()
 
 
 class ComputeDevice(Enum):
@@ -25,13 +28,13 @@ class ComputeDevice(Enum):
 class Context:
     DEFAULT_POOL_SIZE = 2 << 30  # 2 GiB
 
-    def __init__(self, name: bytes, device: ComputeDevice, mem_budget: int = DEFAULT_POOL_SIZE):
+    def __init__(self, name: str, device: ComputeDevice, mem_budget: int = DEFAULT_POOL_SIZE):
         mem_budget = max(mem_budget, self.DEFAULT_POOL_SIZE)
-        rtml.rtml_context_create(c_char_p(name), c_int(device.value), c_size_t(mem_budget))
+        rtml_context_create(name, device.value, mem_budget)
         self.name = name
         self.device = device
         self.mem_budget = mem_budget
 
-    def exists(name: bytes) -> bool:
-        return rtml.rtml_context_exists(c_char_p(name))
+    def exists(name: str) -> bool:
+        return rtml_context_exists(name)
 

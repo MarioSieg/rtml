@@ -50,7 +50,7 @@ namespace rtml {
 
     class context {
     public:
-        enum class compute_device {
+        enum class compute_device : std::uint32_t {
             auto_select = 0,
             cpu,
             gpu,

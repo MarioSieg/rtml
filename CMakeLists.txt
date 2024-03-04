@@ -6,8 +6,10 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(SOURCES
     runtime/rtml.cpp
     runtime/rtml.hpp
-    runtime/rtml_api.cpp
+    runtime/rtml_capi.cpp
+    runtime/rtml_capi.h
 )
 add_compile_options(-march=native)
 add_compile_options(-Ofast)
-add_library(${PROJECT_NAME} SHARED ${SOURCES})
+add_compile_options(-fPIC -rdynamic)
+add_library(rtml_runtime SHARED ${SOURCES})
