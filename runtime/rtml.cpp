@@ -53,7 +53,7 @@ namespace rtml {
     context::context(std::string&& name, compute_device device, const std::size_t pool_mem)
         : m_name{std::move(name)}, m_device{device}, m_pool{pool_mem} {
         rtml_log_info(
-            "Creating context '{}', Device: '{}', Pool memory: {:.01f} GiB\n",
+            "Creating context '{}', Device: '{}', Pool memory: {:.01f} GiB",
             m_name.c_str(),
             context::k_compute_device_names[static_cast<std::size_t>(m_device)],
             static_cast<double>(pool_mem)/std::pow(1024.0, 3.0)
