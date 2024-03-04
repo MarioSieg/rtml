@@ -8,13 +8,16 @@
 #include <cstdio>
 #include <mutex>
 #include <type_traits>
-#include <__fwd/string_view.h>
+
+#include <spdlog/spdlog.h>
+
+#define rtml_log_info SPDLOG_INFO
+#define rtml_log_warn SPDLOG_WARN
+#define rtml_log_error SPDLOG_ERROR
 
 namespace rtml {
     static_assert(std::numeric_limits<float>::is_iec559);
     static_assert(std::numeric_limits<double>::is_iec559);
-
-#define rtml_log(msg, ...) std::printf("[RTML Runtime] " msg, ##__VA_ARGS__);
 
     template <typename T>
     concept is_pool_allocateable = requires {

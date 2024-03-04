@@ -5,6 +5,9 @@
 #include <cassert>
 #include <iostream>
 
+#include <spdlog/logger.h>
+#include <spdlog/sinks/stdout_color_sinks.h>
+
 namespace rtml {
     struct context_proxy final : context {
         template <typename... Args>
@@ -36,23 +39,24 @@ namespace rtml {
 
     auto context::global_init() -> bool {
         std::iostream::sync_with_stdio(false);
-        rtml_log("RTML runtime initialized\n");
-        std::fflush(stdout);
+        const std::shared_ptr<spdlog::logger> logger = spdlog::stdout_color_mt("rtml_runtime");
+        logger->set_pattern("%H:%M:%S:%e %s:%# %^[%l]%$ T:%t %v");
+        spdlog::set_default_logger(logger);
+        rtml_log_info("RTML runtime initialized");
         return true;
     }
 
     auto context::global_shutdown() -> void {
-        rtml_log("RTML runtime shutdown\n");
-        std::fflush(stdout);
+        rtml_log_info("RTML runtime shutdown");
     }
 
     context::context(std::string&& name, compute_device device, const std::size_t pool_mem)
         : m_name{std::move(name)}, m_device{device}, m_pool{pool_mem} {
-        rtml_log(
-            "Creating context '%s', Device: '%s', Pool memory: %.01f MiB\n",
+        rtml_log_info(
+            "Creating context '{}', Device: '{}', Pool memory: {:.01f} GiB\n",
             m_name.c_str(),
             context::k_compute_device_names[static_cast<std::size_t>(m_device)],
-            static_cast<double>(pool_mem)/static_cast<double>(1ull << 20)
+            static_cast<double>(pool_mem)/std::pow(1024.0, 3.0)
         );
     }
 
