@@ -37,6 +37,37 @@ namespace rtml {
         return s_contexts;
     }
 
+    auto context::create_tensor(
+        const tensor::stype type,
+        const std::span<const std::int64_t> dims,
+        tensor* const slice,
+        const std::size_t slice_offset,
+        tensor::id* const out_id
+    ) -> tensor* {
+        assert(m_tensors.size() <= std::numeric_limits<tensor::id>::max());
+        const auto id {static_cast<tensor::id>(m_tensors.size())};
+        auto* tensor = m_pool.alloc<class tensor>(*this, static_cast<tensor::id>(id), type, dims, slice, slice_offset);
+        m_tensors.emplace_back(tensor);
+        if (out_id) *out_id = id;
+        return tensor;
+    }
+
+    auto context::create_tensor(
+        const tensor::stype type,
+        const std::initializer_list<const std::int64_t> dims,
+        tensor* const slice,
+        const std::size_t slice_offset,
+        tensor::id* const out_id
+    ) -> tensor* {
+        return create_tensor(type, std::span{dims.begin(), dims.size()}, slice, slice_offset, out_id);
+    }
+
+    auto context::get_tensor(const tensor::id id) const -> tensor* {
+        if (id >= m_tensors.size()) [[unlikely]]
+            return nullptr;
+        return &*m_tensors[id];
+    }
+
     auto context::global_init() -> bool {
         std::iostream::sync_with_stdio(false);
         const std::shared_ptr<spdlog::logger> logger = spdlog::stdout_color_mt("rtml_runtime");
@@ -93,24 +124,15 @@ namespace rtml {
         std::printf("Mem: [&%p,  &%p]\n", static_cast<void*>(m_top), static_cast<void*>(m_bot));
     }
 
-    auto tensor::create(
-        pool& pool,
-        const stype type,
-        const std::initializer_list<const std::int64_t> dims,
-        tensor* slice,
-        std::size_t slice_offset
-    ) -> tensor* {
-        return pool.alloc<tensor>(pool, type, dims, slice, slice_offset);
-    }
-
     tensor::tensor(
-        pool& pool,
+        context& ctx,
+        const std::uint32_t id,
         stype type,
-        const std::initializer_list<const std::int64_t> dims,
+        const std::span<const std::int64_t> dims,
         tensor* slice,
         std::size_t slice_offset
-    ) noexcept : m_pool{&pool}, m_stype{type} {
-        assert(dims.size() > 0 && dims.size() <= k_max_dims);
+    ) noexcept : m_ctx{ctx}, m_id{id}, m_stype{type} {
+        assert(!dims.empty() && dims.size() <= k_max_dims);
         if (slice && slice->m_slice) { // Account for if slice itself is also a slice
             slice_offset += slice->m_slice_offset;
             slice = slice->m_slice;
@@ -118,16 +140,15 @@ namespace rtml {
         const auto [ssize, salign] {k_stype_traits[static_cast<std::size_t>(type)]};
         std::size_t datasize {ssize};
         for (const auto dim : dims) { // Accumulate total size of tensor
-            assert(dim > 0 && dim < k_max_elems_per_dim);
-            datasize *= dim;
+            datasize *= std::max<decltype(dim)>(1, dim);
         }
         assert(!slice || datasize+slice_offset <= slice->m_size); // Check if slice has enough space
         static constexpr bool k_align_scalar = false; // Aligned data address to scalar alignment?
         m_u8 = slice
             ? slice->m_u8+slice_offset
             : static_cast<std::uint8_t*>(k_align_scalar
-                ? pool.alloc_raw(datasize, salign)
-                : pool.alloc_raw(datasize)); // Point into slice data or allocate new data from pool.
+                ? m_ctx.pool().alloc_raw(datasize, salign)
+                : m_ctx.pool().alloc_raw(datasize)); // Point into slice data or allocate new data from pool.
         m_size = datasize;
         m_slice = slice;
         m_slice_offset = slice_offset;

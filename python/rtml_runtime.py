@@ -887,7 +887,7 @@ for _lib in _libs.values():
     rtml_global_shutdown.restype = None
     break
 
-# /Users/mario/Documents/projects/rtml/runtime/rtml_capi.h: 22
+# /Users/mario/Documents/projects/rtml/runtime/rtml_capi.h: 23
 for _lib in _libs.values():
     if not _lib.has("rtml_context_create", "cdecl"):
         continue
@@ -896,13 +896,24 @@ for _lib in _libs.values():
     rtml_context_create.restype = None
     break
 
-# /Users/mario/Documents/projects/rtml/runtime/rtml_capi.h: 27
+# /Users/mario/Documents/projects/rtml/runtime/rtml_capi.h: 28
 for _lib in _libs.values():
     if not _lib.has("rtml_context_exists", "cdecl"):
         continue
     rtml_context_exists = _lib.get("rtml_context_exists", "cdecl")
     rtml_context_exists.argtypes = [String]
     rtml_context_exists.restype = c_bool
+    break
+
+rtml_tensor_id_t = uint32_t# /Users/mario/Documents/projects/rtml/runtime/rtml_capi.h: 30
+
+# /Users/mario/Documents/projects/rtml/runtime/rtml_capi.h: 31
+for _lib in _libs.values():
+    if not _lib.has("rtml_context_create_tensor", "cdecl"):
+        continue
+    rtml_context_create_tensor = _lib.get("rtml_context_create_tensor", "cdecl")
+    rtml_context_create_tensor.argtypes = [String, uint32_t, c_int64, c_int64, c_int64, c_int64, uint32_t, rtml_tensor_id_t, c_size_t]
+    rtml_context_create_tensor.restype = rtml_tensor_id_t
     break
 
 # No inserted files

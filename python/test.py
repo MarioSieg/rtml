@@ -1,6 +1,7 @@
 import rtml
 
-context = rtml.Context('Test', rtml.ComputeDevice.CPU)
-assert rtml.Context.exists('Test')
+ctx = rtml.Context('Test', rtml.ComputeDevice.CPU)
+
+a = rtml.Tensor(ctx, [2, 3, 4])
 
 rtml.global_shutdown()

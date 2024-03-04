@@ -8,6 +8,7 @@
 #include <cstdio>
 #include <mutex>
 #include <type_traits>
+#include <span>
 
 #include <spdlog/spdlog.h>
 
@@ -51,7 +52,59 @@ namespace rtml {
         std::size_t m_num_allocs {};
     };
 
-    class context {
+    class context;
+    class tensor final {
+    public:
+        using id = std::uint32_t;
+        static constexpr std::int64_t k_max_dims = 4;
+
+        enum class stype {
+            f32,
+            $count
+        };
+
+        struct stype_trait final {
+            std::size_t size;
+            std::size_t align;
+        };
+
+        static constexpr std::array<stype_trait, static_cast<std::size_t>(stype::$count)> k_stype_traits {
+            { sizeof(float), alignof(float) }
+        };
+
+        tensor(const tensor&) = delete;
+        tensor(tensor&&) = delete;
+        auto operator=(const tensor&) -> tensor& = delete;
+        auto operator=(tensor&&) -> tensor& = delete;
+        ~tensor() = default;
+
+    private:
+        friend class context;
+        friend class pool;
+        tensor(
+            context& ctx,
+            std::uint32_t id,
+            stype type,
+            std::span<const std::int64_t> dims,
+            tensor* slice,
+            std::size_t slice_offset
+        ) noexcept;
+
+        context& m_ctx;
+        const std::uint32_t m_id;
+        const stype m_stype; // Tensor scalar data type
+        std::size_t m_size {}; // Tensor data size in bytes
+        std::array<std::int64_t, k_max_dims> m_dims {};
+        std::array<std::int64_t, k_max_dims> m_strides {};
+        tensor* m_slice {};
+        std::size_t m_slice_offset {};
+        union {
+            float* m_s {};
+            std::uint8_t* m_u8;
+        };
+    };
+
+    class context : public std::enable_shared_from_this<context> {
     public:
         enum class compute_device : std::uint32_t {
             auto_select = 0,
@@ -75,6 +128,22 @@ namespace rtml {
         [[nodiscard]] static auto exists(const std::string& name) -> bool;
         [[nodiscard]] static auto get(const std::string& name) -> std::shared_ptr<context>;
         [[nodiscard]] static auto get_all() -> const std::unordered_map<std::string, std::shared_ptr<context>>&;
+        [[nodiscard]] auto create_tensor(
+            tensor::stype type,
+            std::span<const std::int64_t> dims,
+            tensor* slice = nullptr,
+            std::size_t slice_offset = 0,
+            tensor::id* out_id = nullptr
+        ) -> tensor*;
+        [[nodiscard]] auto create_tensor(
+            tensor::stype type,
+            std::initializer_list<const std::int64_t> dims,
+            tensor* slice = nullptr,
+            std::size_t slice_offset = 0,
+            tensor::id* out_id = nullptr
+        ) -> tensor*;
+        [[nodiscard]] auto get_tensor(tensor::id id) const -> tensor*;
+        [[nodiscard]] auto get_all_tensors() noexcept -> std::span<tensor*> { return m_tensors; }
 
         context(const context&) = delete;
         context(context&&) = delete;
@@ -88,71 +157,17 @@ namespace rtml {
         [[nodiscard]] auto name() const noexcept -> const std::string& { return m_name; }
         [[nodiscard]] auto device() const noexcept -> compute_device { return m_device; }
         [[nodiscard]] auto pool() const noexcept -> const pool& { return m_pool; }
+        [[nodiscard]] auto pool() noexcept -> class pool& { return m_pool; }
 
     private:
         static inline std::unordered_map<std::string, std::shared_ptr<context>> s_contexts;
         static inline std::mutex s_contexts_mutex;
         const std::string m_name;
         const compute_device m_device;
-        const class pool m_pool;
+        class pool m_pool;
+        std::vector<tensor*> m_tensors {}; // All tensors in this context. Memory us owned by m_pool.
 
     protected:
         context(std::string&& name, compute_device device, std::size_t pool_mem);
-    };
-
-    class tensor final {
-    public:
-        static constexpr std::int64_t k_max_dims = 4;
-        static constexpr std::int64_t k_max_elems_per_dim = 1ull<<53; // 2^53
-
-        enum class stype {
-            f32,
-            $count
-        };
-
-        struct stype_trait final {
-            std::size_t size;
-            std::size_t align;
-        };
-
-        static constexpr std::array<stype_trait, static_cast<std::size_t>(stype::$count)> k_stype_traits {
-            { sizeof(float), alignof(float) }
-        };
-
-        tensor(const tensor&) = delete;
-        tensor(tensor&&) = delete;
-        auto operator=(const tensor&) -> tensor& = delete;
-        auto operator=(tensor&&) -> tensor& = delete;
-        ~tensor() = default;
-
-        [[nodiscard]] static auto create(
-            pool& pool,
-            stype type,
-            std::initializer_list<const std::int64_t> dims,
-            tensor* slice = nullptr,
-            std::size_t slice_offset = 0
-        ) -> tensor*;
-
-    private:
-        friend class pool;
-        tensor(
-            pool& pool,
-            stype type,
-            std::initializer_list<const std::int64_t> dims,
-            tensor* slice,
-            std::size_t slice_offset
-        ) noexcept;
-
-        pool* const m_pool;
-        const stype m_stype; // Tensor scalar data type
-        std::size_t m_size {}; // Tensor data size in bytes
-        std::array<std::int64_t, k_max_dims> m_dims {};
-        std::array<std::int64_t, k_max_dims> m_strides {};
-        tensor* m_slice {};
-        std::size_t m_slice_offset {};
-        union {
-            float* m_s {};
-            std::uint8_t* m_u8;
-        };
     };
 }
