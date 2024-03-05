@@ -30,7 +30,7 @@ class Isolate:
     ACTIVE = None
     _INITIALIZED = False
 
-    def __init__(self, name: str, device: ComputeDevice, mem_budget: int = DEFAULT_POOL_SIZE):
+    def __init__(self, name: str, device: ComputeDevice = ComputeDevice.AUTO, mem_budget: int = DEFAULT_POOL_SIZE):
         self._lazy_init()
         mem_budget = max(mem_budget, self.DEFAULT_POOL_SIZE)
         rtml_isolate_create(name, device.value, mem_budget)
@@ -67,7 +67,8 @@ class Tensor:
         d3 = shape[2] if len(shape) > 2 else 1
         d4 = shape[3] if len(shape) > 3 else 1
         self._ctx = ctx
-        self._handle = rtml_isolate_create_tensor(ctx.name, dtype.value, d1, d2, d3, d4, len(shape), rtml_tensor_id_t(0), c_size_t(0))
+        self._handle = rtml_isolate_create_tensor(ctx.name, dtype.value, d1, d2, d3, d4, len(shape),
+                                                  rtml_tensor_id_t(0), c_size_t(0))
         self._shape = shape
         self._dtype = dtype
 
