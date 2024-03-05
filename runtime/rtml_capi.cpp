@@ -1,7 +1,7 @@
 // Copyright Mario "Neo" Sieg 2024. All rights reserved. mario.sieg.64@gmail.com
 
 #include "rtml_capi.h"
-#include "rtml.hpp"
+#include "context.hpp"
 
 using namespace rtml;
 
@@ -51,7 +51,7 @@ extern "C" {
             std::abort();
         }
         context::get(context_name)->create_tensor(
-            static_cast<tensor::stype>(data_type),
+            static_cast<tensor::dtype>(data_type),
             shape,
             view == 0 ? nullptr : context::get(context_name)->get_tensor(view),
             slice_offset,

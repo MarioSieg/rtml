@@ -2,24 +2,22 @@
 
 #pragma once
 
-#include <array>
-#include <cstdint>
-#include <cstddef>
-#include <cstdio>
-#include <mutex>
-#include <type_traits>
-#include <span>
+#define RTML_LOG_ENABLE true
 
+#if RTML_LOG_ENABLE
 #include <spdlog/spdlog.h>
-
 #define rtml_log_info SPDLOG_INFO
 #define rtml_log_warn SPDLOG_WARN
 #define rtml_log_error SPDLOG_ERROR
+#else
+#define rtml_log_info(...)
+#define rtml_log_warn(...)
+#define rtml_log_error(...)
+#endif
+
+#include "tensor.hpp"
 
 namespace rtml {
-    static_assert(std::numeric_limits<float>::is_iec559);
-    static_assert(std::numeric_limits<double>::is_iec559);
-
     template <typename T>
     concept is_pool_allocateable = requires {
         requires std::is_trivially_destructible_v<T>;
@@ -37,7 +35,7 @@ namespace rtml {
         [[nodiscard]] auto alloc_raw(std::size_t size) noexcept -> void*;
         [[nodiscard]] auto alloc_raw(std::size_t size, std::size_t align) noexcept -> void*;
         template <typename T, typename... Args> requires
-            is_pool_allocateable<T> // && std::is_constructible_v<T, std::decay_t<Args>...>
+            is_pool_allocateable<T> // && std::is_constructible_v<T, Args...>
         [[nodiscard]] auto alloc(Args&&... args) noexcept(std::is_nothrow_constructible_v<T, Args...>) -> T* {
             T* p {static_cast<T*>(alloc_raw(sizeof(T), alignof(T)))};
             return new (p) T{std::forward<Args>(args)...};
@@ -50,58 +48,6 @@ namespace rtml {
         std::uint8_t* m_top {};
         std::uint8_t* m_bot {};
         std::size_t m_num_allocs {};
-    };
-
-    class context;
-    class tensor final {
-    public:
-        using id = std::uint32_t;
-        static constexpr std::int64_t k_max_dims = 4;
-
-        enum class stype {
-            f32,
-            $count
-        };
-
-        struct stype_trait final {
-            std::size_t size;
-            std::size_t align;
-        };
-
-        static constexpr std::array<stype_trait, static_cast<std::size_t>(stype::$count)> k_stype_traits {
-            { sizeof(float), alignof(float) }
-        };
-
-        tensor(const tensor&) = delete;
-        tensor(tensor&&) = delete;
-        auto operator=(const tensor&) -> tensor& = delete;
-        auto operator=(tensor&&) -> tensor& = delete;
-        ~tensor() = default;
-
-    private:
-        friend class context;
-        friend class pool;
-        tensor(
-            context& ctx,
-            std::uint32_t id,
-            stype type,
-            std::span<const std::int64_t> dims,
-            tensor* slice,
-            std::size_t slice_offset
-        ) noexcept;
-
-        context& m_ctx;
-        const std::uint32_t m_id;
-        const stype m_stype; // Tensor scalar data type
-        std::size_t m_size {}; // Tensor data size in bytes
-        std::array<std::int64_t, k_max_dims> m_dims {};
-        std::array<std::int64_t, k_max_dims> m_strides {};
-        tensor* m_slice {};
-        std::size_t m_slice_offset {};
-        union {
-            float* m_s {};
-            std::uint8_t* m_u8;
-        };
     };
 
     class context : public std::enable_shared_from_this<context> {
@@ -129,14 +75,14 @@ namespace rtml {
         [[nodiscard]] static auto get(const std::string& name) -> std::shared_ptr<context>;
         [[nodiscard]] static auto get_all() -> const std::unordered_map<std::string, std::shared_ptr<context>>&;
         [[nodiscard]] auto create_tensor(
-            tensor::stype type,
+            tensor::dtype type,
             std::span<const std::int64_t> dims,
             tensor* slice = nullptr,
             std::size_t slice_offset = 0,
             tensor::id* out_id = nullptr
         ) -> tensor*;
         [[nodiscard]] auto create_tensor(
-            tensor::stype type,
+            tensor::dtype type,
             std::initializer_list<const std::int64_t> dims,
             tensor* slice = nullptr,
             std::size_t slice_offset = 0,
@@ -162,6 +108,7 @@ namespace rtml {
     private:
         static inline std::unordered_map<std::string, std::shared_ptr<context>> s_contexts;
         static inline std::mutex s_contexts_mutex;
+        static inline constinit std::atomic_bool s_initialized;
         const std::string m_name;
         const compute_device m_device;
         class pool m_pool;

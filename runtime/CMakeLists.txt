@@ -1,9 +1,4 @@
-set(SOURCES
-    rtml.cpp
-    rtml.hpp
-    rtml_capi.cpp
-    rtml_capi.h
-)
+file(GLOB SOURCES *.cpp *.hpp *.h)
 add_compile_options(-march=native)
 if (CMAKE_BUILD_TYPE STREQUAL "Debug")
     add_compile_options(-O0 -g)
