@@ -20,16 +20,15 @@ extern "C" {
 extern RTML_API bool rtml_global_init(void);
 extern RTML_API void rtml_global_shutdown(void);
 
-extern RTML_API void rtml_context_create(
+typedef uint32_t rtml_tensor_id_t;
+extern RTML_API void rtml_isolate_create(
    const char* name,
    uint32_t /*context::compute_device*/ device,
    size_t memory_budged
 );
-extern RTML_API bool rtml_context_exists(const char* name);
-
-typedef uint32_t rtml_tensor_id_t;
-extern RTML_API rtml_tensor_id_t rtml_context_create_tensor(
-   const char* context_name,
+extern RTML_API bool rtml_isolate_exists(const char* name);
+extern RTML_API rtml_tensor_id_t rtml_isolate_create_tensor(
+   const char* isolate_name,
    uint32_t /*tensor::stype*/ data_type,
    int64_t d1, int64_t d2,
    int64_t d3, int64_t d4,
@@ -37,7 +36,7 @@ extern RTML_API rtml_tensor_id_t rtml_context_create_tensor(
    rtml_tensor_id_t view,
    size_t slice_offset
 );
-
+extern RTML_API const char* rtml_tensor_print(const char* isolate_name, rtml_tensor_id_t id);
 
 #ifdef __cplusplus
 }

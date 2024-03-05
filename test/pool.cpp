@@ -1,5 +1,5 @@
 #include <gtest/gtest.h>
-#include <context.hpp>
+#include <isolate.hpp>
 
 using namespace rtml;
 

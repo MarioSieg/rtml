@@ -1,7 +1,8 @@
 import rtml
 
-ctx = rtml.Context('Test', rtml.ComputeDevice.CPU)
+ctx = rtml.Isolate('Test', rtml.ComputeDevice.CPU)
 
-a = rtml.Tensor(ctx, [2, 3, 4])
+a = rtml.Tensor(ctx, [8, 16, 16, 16])
+print(a)
 
 rtml.global_shutdown()

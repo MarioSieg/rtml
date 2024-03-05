@@ -1,6 +1,6 @@
 // Copyright Mario "Neo" Sieg 2024. All rights reserved. mario.sieg.64@gmail.com
 
-#include "context.hpp"
+#include "isolate.hpp"
 
 #include <istream>
 
@@ -42,16 +42,16 @@ namespace rtml {
         std::printf("Mem: &[%p, %p]\n", static_cast<void*>(m_storage.get()), static_cast<void*>(m_bot));
     }
 
-    struct context_proxy final : context {
+    struct context_proxy final : isolate {
         template <typename... Args>
-        explicit context_proxy(Args&&... args) : context{std::forward<Args>(args)...} {}
+        explicit context_proxy(Args&&... args) : isolate{std::forward<Args>(args)...} {}
     };
 
-    auto context::create(
+    auto isolate::create(
         std::string&& name,
         const compute_device device,
         const std::size_t pool_mem
-    ) -> std::shared_ptr<context> {
+    ) -> std::shared_ptr<isolate> {
         if (!s_initialized.load(std::memory_order::seq_cst)) [[unlikely]] {
             rtml_log_error("RTML runtime not initialized");
             std::abort();
@@ -60,21 +60,21 @@ namespace rtml {
         return s_contexts.emplace(std::string{name}, std::make_shared<context_proxy>(std::move(name), device, pool_mem)).first->second;
     }
 
-    auto context::exists(const std::string& name) -> bool {
+    auto isolate::exists(const std::string& name) -> bool {
         std::unique_lock lock {s_contexts_mutex};
         return s_contexts.contains(name);
     }
 
-    auto context::get(const std::string& name) -> std::shared_ptr<context> {
+    auto isolate::get(const std::string& name) -> std::shared_ptr<isolate> {
         std::unique_lock lock {s_contexts_mutex};
         return s_contexts.at(name);
     }
 
-    auto context::get_all() -> const std::unordered_map<std::string, std::shared_ptr<context>>& {
+    auto isolate::get_all() -> const std::unordered_map<std::string, std::shared_ptr<isolate>>& {
         return s_contexts;
     }
 
-    auto context::create_tensor(
+    auto isolate::create_tensor(
         const tensor::dtype type,
         const std::span<const std::int64_t> dims,
         tensor* const slice,
@@ -89,7 +89,7 @@ namespace rtml {
         return tensor;
     }
 
-    auto context::create_tensor(
+    auto isolate::create_tensor(
         const tensor::dtype type,
         const std::initializer_list<const std::int64_t> dims,
         tensor* const slice,
@@ -99,13 +99,13 @@ namespace rtml {
         return create_tensor(type, std::span{dims.begin(), dims.size()}, slice, slice_offset, out_id);
     }
 
-    auto context::get_tensor(const tensor::id id) const -> tensor* {
+    auto isolate::get_tensor(const tensor::id id) const -> tensor* {
         if (id >= m_tensors.size()) [[unlikely]]
             return nullptr;
         return &*m_tensors[id];
     }
 
-    auto context::global_init() -> bool {
+    auto isolate::global_init() -> bool {
         if (s_initialized.load(std::memory_order::seq_cst)) {
             rtml_log_warn("RTML runtime already initialized");
             return false;
@@ -121,7 +121,7 @@ namespace rtml {
         return true;
     }
 
-    auto context::global_shutdown() -> void {
+    auto isolate::global_shutdown() -> void {
         if (!s_initialized.load(std::memory_order::seq_cst)) {
             rtml_log_warn("RTML runtime not initialized");
             return;
@@ -130,12 +130,12 @@ namespace rtml {
         rtml_log_info("RTML runtime shutdown");
     }
 
-    context::context(std::string&& name, compute_device device, const std::size_t pool_mem)
+    isolate::isolate(std::string&& name, compute_device device, const std::size_t pool_mem)
         : m_name{std::move(name)}, m_device{device}, m_pool{pool_mem} {
         rtml_log_info(
-            "Creating context '{}', Device: '{}', Pool memory: {:.01f} GiB",
+            "Creating isolate '{}', Device: '{}', Pool memory: {:.01f} GiB",
             m_name.c_str(),
-            context::k_compute_device_names[static_cast<std::size_t>(m_device)],
+            isolate::k_compute_device_names[static_cast<std::size_t>(m_device)],
             static_cast<double>(pool_mem)/std::pow(1024.0, 3.0)
         );
     }

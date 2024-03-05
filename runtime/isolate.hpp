@@ -54,7 +54,7 @@ namespace rtml {
         std::size_t m_num_allocs {};
     };
 
-    class context : public std::enable_shared_from_this<context> {
+    class isolate : public std::enable_shared_from_this<isolate> {
     public:
         enum class compute_device : std::uint32_t {
             auto_select = 0,
@@ -74,10 +74,10 @@ namespace rtml {
             std::string&& name,
             compute_device device,
             std::size_t pool_mem
-        ) -> std::shared_ptr<context>;
+        ) -> std::shared_ptr<isolate>;
         [[nodiscard]] static auto exists(const std::string& name) -> bool;
-        [[nodiscard]] static auto get(const std::string& name) -> std::shared_ptr<context>;
-        [[nodiscard]] static auto get_all() -> const std::unordered_map<std::string, std::shared_ptr<context>>&;
+        [[nodiscard]] static auto get(const std::string& name) -> std::shared_ptr<isolate>;
+        [[nodiscard]] static auto get_all() -> const std::unordered_map<std::string, std::shared_ptr<isolate>>&;
         [[nodiscard]] auto create_tensor(
             tensor::dtype type,
             std::span<const std::int64_t> dims,
@@ -95,11 +95,11 @@ namespace rtml {
         [[nodiscard]] auto get_tensor(tensor::id id) const -> tensor*;
         [[nodiscard]] auto get_all_tensors() noexcept -> std::span<tensor*> { return m_tensors; }
 
-        context(const context&) = delete;
-        context(context&&) = delete;
-        auto operator=(const context&) -> context& = delete;
-        auto operator=(context&&) -> context& = delete;
-        virtual ~context() = default;
+        isolate(const isolate&) = delete;
+        isolate(isolate&&) = delete;
+        auto operator=(const isolate&) -> isolate& = delete;
+        auto operator=(isolate&&) -> isolate& = delete;
+        virtual ~isolate() = default;
 
         [[nodiscard]] static auto global_init() -> bool;
         static auto global_shutdown() -> void;
@@ -110,7 +110,7 @@ namespace rtml {
         [[nodiscard]] auto pool() noexcept -> class pool& { return m_pool; }
 
     private:
-        static inline std::unordered_map<std::string, std::shared_ptr<context>> s_contexts;
+        static inline std::unordered_map<std::string, std::shared_ptr<isolate>> s_contexts;
         static inline std::mutex s_contexts_mutex;
         static inline constinit std::atomic_bool s_initialized;
         const std::string m_name;
@@ -119,6 +119,6 @@ namespace rtml {
         std::vector<tensor*> m_tensors {}; // All tensors in this context. Memory us owned by m_pool.
 
     protected:
-        context(std::string&& name, compute_device device, std::size_t pool_mem);
+        isolate(std::string&& name, compute_device device, std::size_t pool_mem);
     };
 }

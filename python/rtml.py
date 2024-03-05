@@ -25,7 +25,7 @@ class ComputeDevice(Enum):
     TPU = 3
 
 
-class Context:
+class Isolate:
     DEFAULT_POOL_SIZE = 2 << 30  # 2 GiB
     ACTIVE = None
     _INITIALIZED = False
@@ -33,7 +33,7 @@ class Context:
     def __init__(self, name: str, device: ComputeDevice, mem_budget: int = DEFAULT_POOL_SIZE):
         self._lazy_init()
         mem_budget = max(mem_budget, self.DEFAULT_POOL_SIZE)
-        rtml_context_create(name, device.value, mem_budget)
+        rtml_isolate_create(name, device.value, mem_budget)
         self.name = name
         self.device = device
         self.mem_budget = mem_budget
@@ -46,9 +46,9 @@ class Context:
             self._INITIALIZED = True
 
     def exists(name: str) -> bool:
-        return rtml_context_exists(name)
+        return rtml_isolate_exists(name)
 
-    def active(self) -> 'Context':
+    def active(self) -> 'Isolate':
         return self.ACTIVE
 
 
@@ -58,16 +58,21 @@ class Tensor:
     class DType(Enum):
         F32 = 0
 
-    def __init__(self, ctx: Context, shape: list[int], dtype: DType = DType.F32):
+    def __init__(self, ctx: Isolate, shape: list[int], dtype: DType = DType.F32):
         assert ctx is not None, 'Invalid context'
-        assert all([0 < x <= self.MAX_DIMS for x in shape]), 'Invalid tensor shape'
+        assert len(shape) <= self.MAX_DIMS, 'Invalid tensor shape'
+        assert all([0 < x for x in shape]), 'Invalid tensor shape'
         d1 = shape[0]
         d2 = shape[1] if len(shape) > 1 else 1
         d3 = shape[2] if len(shape) > 2 else 1
         d4 = shape[3] if len(shape) > 3 else 1
-        self._handle = rtml_context_create_tensor(ctx.name, dtype.value, d1, d2, d3, d4, len(shape), rtml_tensor_id_t(0), c_size_t(0))
+        self._ctx = ctx
+        self._handle = rtml_isolate_create_tensor(ctx.name, dtype.value, d1, d2, d3, d4, len(shape), rtml_tensor_id_t(0), c_size_t(0))
         self._shape = shape
         self._dtype = dtype
+
+    def __str__(self) -> str:
+        return rtml_tensor_print(self._ctx.name, self._handle).decode('utf-8')
 
     def shape(self) -> list[int]:
         return self._shape
