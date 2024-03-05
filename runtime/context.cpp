@@ -13,13 +13,12 @@ namespace rtml {
     pool::pool(const std::size_t size) : m_size{size}, m_storage{new std::uint8_t[size]} {
         if (!size) [[unlikely]]
             std::abort();
-        m_top = m_storage.get();
-        m_bot = m_top + size;
+        m_bot = m_storage.get() + size;
     }
 
     auto pool::alloc_raw(const std::size_t size) noexcept -> void* {
         m_bot -= size;
-        if (m_bot < m_top) [[unlikely]]
+        if (m_bot < m_storage.get()) [[unlikely]]
             std::abort();
         ++m_num_allocs;
         return m_bot;
@@ -33,14 +32,14 @@ namespace rtml {
     }
 
     auto pool::print_info() const -> void {
-        const std::ptrdiff_t used {std::max<decltype(used)>(0, m_bot-m_top)};
+        const std::ptrdiff_t used {std::max<decltype(used)>(0, m_bot-m_storage.get())};
         const double perc {100.0*static_cast<double>(m_size - used)/static_cast<double>(m_size)};
         std::printf(
             "Pool: %.03f/%.01f MiB, used: %.03f%%, %zu allocs\n",
             static_cast<double>(m_size-used)/std::pow(1024.0, 2.0),
            static_cast<double>(m_size)/std::pow(1024.0, 2.0), perc, m_num_allocs
         );
-        std::printf("Mem: &[%p, %p]\n", static_cast<void*>(m_top), static_cast<void*>(m_bot));
+        std::printf("Mem: &[%p, %p]\n", static_cast<void*>(m_storage.get()), static_cast<void*>(m_bot));
     }
 
     struct context_proxy final : context {

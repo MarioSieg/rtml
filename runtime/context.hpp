@@ -41,11 +41,15 @@ namespace rtml {
             return new (p) T{std::forward<Args>(args)...};
         }
         auto print_info() const -> void;
+        [[nodiscard]] auto size() const noexcept -> std::size_t { return m_size; }
+        [[nodiscard]] auto num_allocs() const noexcept -> std::size_t { return m_num_allocs; }
+        [[nodiscard]] auto data() const noexcept -> std::uint8_t* { return m_storage.get(); }
+        [[nodiscard]] auto needle() const noexcept -> std::uint8_t* { return m_bot; }
+        [[nodiscard]] auto bytes_allocated() const noexcept -> std::size_t { return m_size-(m_bot-m_storage.get()); }
 
     private:
         const std::size_t m_size;
         const std::unique_ptr<std::uint8_t[]> m_storage;
-        std::uint8_t* m_top {};
         std::uint8_t* m_bot {};
         std::size_t m_num_allocs {};
     };
