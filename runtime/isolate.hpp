@@ -32,13 +32,18 @@ namespace rtml {
         auto operator=(pool&&) -> pool& = delete;
         ~pool() = default;
 
+        static constexpr auto k_natural_align {alignof(std::max_align_t) > 8 ? alignof(std::max_align_t) : 8};
+        static constexpr bool k_force_align {true};
         [[nodiscard]] auto alloc_raw(std::size_t size) noexcept -> void*;
         [[nodiscard]] auto alloc_raw(std::size_t size, std::size_t align) noexcept -> void*;
-        template <typename T, typename... Args> requires
-            is_pool_allocateable<T> // && std::is_constructible_v<T, Args...>
+        template <typename T, typename... Args>
+            requires is_pool_allocateable<T> && std::is_constructible_v<T, Args...>
         [[nodiscard]] auto alloc(Args&&... args) noexcept(std::is_nothrow_constructible_v<T, Args...>) -> T* {
-            T* p {static_cast<T*>(alloc_raw(sizeof(T), alignof(T)))};
-            return new (p) T{std::forward<Args>(args)...};
+            if constexpr (alignof(T) > k_natural_align || k_force_align) {
+                return new(static_cast<T*>(alloc_raw(sizeof(T), alignof(T)))) T{std::forward<Args>(args)...};
+            } else {
+                return new(static_cast<T*>(alloc_raw(sizeof(T)))) T{std::forward<Args>(args)...};
+            }
         }
         auto print_info() const -> void;
         [[nodiscard]] auto size() const noexcept -> std::size_t { return m_size; }

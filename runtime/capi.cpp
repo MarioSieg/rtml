@@ -1,6 +1,6 @@
 // Copyright Mario "Neo" Sieg 2024. All rights reserved. mario.sieg.64@gmail.com
 
-#include "rtml_capi.h"
+#include "capi.h"
 #include "isolate.hpp"
 
 using namespace rtml;

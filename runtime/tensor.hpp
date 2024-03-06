@@ -49,18 +49,16 @@ namespace rtml {
         auto set_name(const char* name) -> void { std::strncpy(m_name.data(), name, k_max_name); }
         [[nodiscard]] auto print() -> std::string;
 
-    private:
-        friend class isolate;
-        friend class pool;
-        tensor(
-            isolate& ctx,
-            std::uint32_t id,
-            dtype type,
-            std::span<const std::int64_t> dims,
-            tensor* slice,
-            std::size_t slice_offset
+        tensor( // Do NOT use this constructor directly, use isolate::create_tensor instead
+          isolate& ctx,
+          std::uint32_t id,
+          dtype type,
+          std::span<const std::int64_t> dims,
+          tensor* slice,
+          std::size_t slice_offset
         ) noexcept;
 
+    private:
         isolate& m_ctx;
         const std::uint32_t m_id;
         std::array<char, k_max_name> m_name {}; // Tensor name - cannot use std::string because we must be trivially destructable

@@ -1,4 +1,5 @@
 #include <gtest/gtest.h>
+
 #include <isolate.hpp>
 
 using namespace rtml;
