@@ -8,6 +8,7 @@
 #include <mutex>
 #include <span>
 
+#include "fixed_vector.hpp"
 #include "spdlog/fmt/bundled/format.h"
 
 namespace rtml {
@@ -16,8 +17,9 @@ namespace rtml {
     class tensor final {
     public:
         using id = std::uint32_t;
-        static constexpr std::int64_t k_max_dims = 4;
-        static constexpr std::size_t k_max_name = 128;
+        static constexpr std::int64_t k_max_dims {4};
+        static constexpr std::size_t k_max_operands {2};
+        static constexpr std::size_t k_max_name {128};
 
         enum class dtype : std::uint32_t {
             f32 = 0,
@@ -50,6 +52,8 @@ namespace rtml {
         [[nodiscard]] auto get_strides() const noexcept -> std::span<const std::int64_t, k_max_dims> { return m_strides; }
         [[nodiscard]] auto get_slice() const noexcept -> tensor* { return m_slice; }
         [[nodiscard]] auto get_slice_offset() const noexcept -> std::size_t { return m_slice_offset; }
+        [[nodiscard]] auto get_operands() noexcept -> fixed_vector<const tensor*, k_max_operands>& { return m_operands; }
+        [[nodiscard]] auto get_operands() const noexcept -> const fixed_vector<const tensor*, k_max_operands>& { return m_operands; }
         [[nodiscard]] auto get_data() const noexcept -> void* { return m_x.u8; }
         [[nodiscard]] auto get_name() const noexcept -> const char* { return m_name.data(); }
         [[nodiscard]] auto is_contiguous() const noexcept -> bool;
@@ -89,6 +93,7 @@ namespace rtml {
         std::uint32_t m_num_dims {}; // Number of dimensions (1-k_max_dims)
         std::array<std::int64_t, k_max_dims> m_dims {};
         std::array<std::int64_t, k_max_dims> m_strides {};
+        fixed_vector<const tensor*, k_max_operands> m_operands {};
         tensor* m_slice {};
         std::size_t m_slice_offset {};
         union {
