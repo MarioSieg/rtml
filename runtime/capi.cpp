@@ -66,7 +66,7 @@ extern "C" {
             std::abort();
         }
         static std::string proxy;
-        proxy = isolate::get(isolate_name)->get_tensor(id)->print();
+        proxy = isolate::get(isolate_name)->get_tensor(id)->to_string();
         return proxy.c_str();
     }
 }

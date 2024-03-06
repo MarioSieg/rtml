@@ -23,12 +23,13 @@ namespace rtml {
         };
 
         struct dtype_trait final {
-            std::size_t size;
-            std::size_t align;
+            std::string_view name {};
+            std::size_t size {};
+            std::size_t align {};
         };
 
         static constexpr std::array<dtype_trait, static_cast<std::size_t>(dtype::$count)> k_stype_traits {
-            { sizeof(float), alignof(float) }
+            { "f32", sizeof(float), alignof(float) }
         };
 
         tensor(const tensor&) = delete;
@@ -37,9 +38,11 @@ namespace rtml {
         auto operator=(tensor&&) -> tensor& = delete;
         ~tensor() = default;
 
-        [[nodiscard]] auto get_style() const noexcept -> dtype { return m_dtype; }
+        [[nodiscard]] auto get_data_type() const noexcept -> dtype { return m_dtype; }
+        [[nodiscard]] auto get_data_type_traits() const noexcept -> const dtype_trait& { return k_stype_traits[static_cast<std::size_t>(m_dtype)]; }
         [[nodiscard]] auto get_id() const noexcept -> id { return m_id; }
-        [[nodiscard]] auto get_size() const noexcept -> std::size_t { return m_size; }
+        [[nodiscard]] auto get_data_size() const noexcept -> std::size_t { return m_size; }
+        [[nodiscard]] auto get_num_dims() const noexcept -> std::uint32_t { return m_num_dims; }
         [[nodiscard]] auto get_dims() const noexcept -> std::span<const std::int64_t, k_max_dims> { return m_dims; }
         [[nodiscard]] auto get_strides() const noexcept -> std::span<const std::int64_t, k_max_dims> { return m_strides; }
         [[nodiscard]] auto get_slice() const noexcept -> tensor* { return m_slice; }
@@ -47,7 +50,7 @@ namespace rtml {
         [[nodiscard]] auto get_data() const noexcept -> void* { return m_s; }
         [[nodiscard]] auto get_name() const noexcept -> const char* { return m_name.data(); }
         auto set_name(const char* name) -> void { std::strncpy(m_name.data(), name, k_max_name); }
-        [[nodiscard]] auto print() -> std::string;
+        [[nodiscard]] auto to_string() -> std::string;
 
         tensor( // Do NOT use this constructor directly, use isolate::create_tensor instead
           isolate& ctx,

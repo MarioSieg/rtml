@@ -126,8 +126,11 @@ namespace rtml {
             rtml_log_warn("RTML runtime not initialized");
             return;
         }
-        s_initialized.store(false, std::memory_order::seq_cst);
         rtml_log_info("RTML runtime shutdown");
+#if RTML_LOG_ENABLE
+        spdlog::shutdown();
+#endif
+        s_initialized.store(false, std::memory_order::seq_cst);
     }
 
     isolate::isolate(std::string&& name, compute_device device, const std::size_t pool_mem)
