@@ -22,14 +22,14 @@ TEST(fixed_vector, basic) {
     ASSERT_EQ(vec[1], 2);
     ASSERT_EQ(vec[2], 3);
     ASSERT_EQ(vec[3], 4);
-    vec.clear();
-    ASSERT_EQ(vec.size(), 0);
     const std::span<int> span {vec};
     ASSERT_EQ(span.size(), 4);
     ASSERT_EQ(span[0], 1);
     ASSERT_EQ(span[1], 2);
     ASSERT_EQ(span[2], 3);
     ASSERT_EQ(span[3], 4);
+    vec.clear();
+    ASSERT_EQ(vec.size(), 0);
 }
 
 TEST(fixed_vector, iterator) {
