@@ -9,11 +9,11 @@ extern "C" {
     static_assert(std::is_same_v<tensor::id, rtml_tensor_id_t>);
 
     auto rtml_global_init() -> bool {
-        return isolate::global_init();
+        return isolate::runtime_global_init();
     }
 
     auto rtml_global_shutdown() -> void {
-        isolate::global_shutdown();
+        isolate::init_global_runtime();
     }
 
     auto rtml_isolate_create(

@@ -52,7 +52,7 @@ namespace rtml {
         const compute_device device,
         const std::size_t pool_mem
     ) -> std::shared_ptr<isolate> {
-        if (!s_initialized.load(std::memory_order::seq_cst)) [[unlikely]] {
+        if (!s_runtime_initialized.load(std::memory_order::seq_cst)) [[unlikely]] {
             rtml_log_warn("RTML runtime not initialized");
             std::abort();
         }
@@ -105,8 +105,8 @@ namespace rtml {
         return &*m_tensors[id];
     }
 
-    auto isolate::global_init() -> bool {
-        if (s_initialized.load(std::memory_order::seq_cst)) {
+    auto isolate::runtime_global_init() -> bool {
+        if (s_runtime_initialized.load(std::memory_order::seq_cst)) {
             rtml_log_warn("RTML runtime already initialized");
             return false;
         }
@@ -116,13 +116,13 @@ namespace rtml {
         logger->set_pattern("%H:%M:%S:%e %s:%# %^[%l]%$ T:%t %v");
         spdlog::set_default_logger(logger);
 #endif
-        s_initialized.store(true, std::memory_order::seq_cst);
+        s_runtime_initialized.store(true, std::memory_order::seq_cst);
         rtml_log_info("RTML runtime initialized");
         return true;
     }
 
-    auto isolate::global_shutdown() -> void {
-        if (!s_initialized.load(std::memory_order::seq_cst)) {
+    auto isolate::init_global_runtime() -> void {
+        if (!s_runtime_initialized.load(std::memory_order::seq_cst)) {
             rtml_log_warn("RTML runtime not initialized");
             return;
         }
@@ -130,7 +130,7 @@ namespace rtml {
 #if RTML_LOG_ENABLE
         spdlog::shutdown();
 #endif
-        s_initialized.store(false, std::memory_order::seq_cst);
+        s_runtime_initialized.store(false, std::memory_order::seq_cst);
     }
 
     isolate::isolate(std::string&& name, compute_device device, const std::size_t pool_mem)

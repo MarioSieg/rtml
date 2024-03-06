@@ -16,10 +16,12 @@
 namespace rtml {
     class isolate;
 
+    // Represents an N-dimensional (1-k_max_dims) tensor, which is also a vertex in the computation DAG.
     class tensor final {
     public:
         using id = std::uint32_t;
-        static constexpr std::int64_t k_max_dims {4};
+        using dim = std::int64_t; // Dimension scalar used for dims, indices and strides.
+        static constexpr dim k_max_dims {4};
         static constexpr std::size_t k_max_operands {2};
         static constexpr std::size_t k_max_name {128};
 
@@ -49,9 +51,9 @@ namespace rtml {
         [[nodiscard]] auto get_id() const noexcept -> id { return m_id; }
         [[nodiscard]] auto get_data_size() const noexcept -> std::size_t { return m_datasize; }
         [[nodiscard]] auto get_num_dims() const noexcept -> std::uint32_t { return m_num_dims; }
-        [[nodiscard]] auto get_dims() const noexcept -> std::span<const std::int64_t, k_max_dims> { return m_dims; }
-        [[nodiscard]] auto get_active_dims() const noexcept -> std::span<const std::int64_t> { return {m_dims.cbegin(), m_num_dims}; }
-        [[nodiscard]] auto get_strides() const noexcept -> std::span<const std::int64_t, k_max_dims> { return m_strides; }
+        [[nodiscard]] auto get_dims() const noexcept -> std::span<const dim, k_max_dims> { return m_dims; }
+        [[nodiscard]] auto get_active_dims() const noexcept -> std::span<const dim> { return {m_dims.cbegin(), m_num_dims}; }
+        [[nodiscard]] auto get_strides() const noexcept -> std::span<const dim, k_max_dims> { return m_strides; }
         [[nodiscard]] auto get_slice() const noexcept -> tensor* { return m_slice; }
         [[nodiscard]] auto get_slice_offset() const noexcept -> std::size_t { return m_slice_offset; }
         [[nodiscard]] auto get_operands() noexcept -> fixed_vector<const tensor*, k_max_operands>& { return m_operands; }
@@ -61,8 +63,8 @@ namespace rtml {
         [[nodiscard]] auto get_op() const noexcept -> op::opcode { return m_op; }
         [[nodiscard]] auto is_contiguous() const noexcept -> bool;
         [[nodiscard]] auto can_repeat(const tensor* other) const noexcept -> bool;
-        [[nodiscard]] auto row_count() const noexcept -> std::int64_t;
-        auto unroll_index(std::int64_t i, std::array<std::int64_t, k_max_dims>& dims) const noexcept -> void;
+        [[nodiscard]] auto row_count() const noexcept -> dim;
+        auto unroll_index(dim i) const noexcept -> std::array<dim, k_max_dims>;
 
         [[nodiscard]] auto isomorph() noexcept -> tensor*;
         [[nodiscard]] auto clone() noexcept -> tensor*;
@@ -82,7 +84,7 @@ namespace rtml {
           isolate& ctx,
           std::uint32_t id,
           dtype type,
-          std::span<const std::int64_t> dims,
+          std::span<const dim> dims,
           tensor* slice,
           std::size_t slice_offset
         ) noexcept;
@@ -95,8 +97,8 @@ namespace rtml {
         std::size_t m_datasize {}; // Tensor data size in bytes
         std::uint32_t m_num_dims {}; // Number of dimensions (1-k_max_dims)
         op::opcode m_op {op::nop};
-        std::array<std::int64_t, k_max_dims> m_dims {};
-        std::array<std::int64_t, k_max_dims> m_strides {};
+        std::array<dim, k_max_dims> m_dims {};
+        std::array<dim, k_max_dims> m_strides {};
         fixed_vector<const tensor*, k_max_operands> m_operands {};
         tensor* m_slice {};
         std::size_t m_slice_offset {};

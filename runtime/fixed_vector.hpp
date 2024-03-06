@@ -96,8 +96,8 @@ namespace rtml {
             if (m_len >= N) [[unlikely]] std::abort();
             return *new(reinterpret_cast<T*>(m_storage.data()+sizeof(T)*m_len++)) T{std::forward<Args>(args)...};
         }
-        operator std::span<T> () noexcept {
-            return std::span<T>{data(), m_len};
+        operator std::span<T, std::dynamic_extent> () noexcept {
+            return std::span<T, std::dynamic_extent>{data(), m_len};
         }
         auto clear() noexcept -> void {
             if constexpr (!std::is_trivially_destructible_v<T>)

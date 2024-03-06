@@ -33,7 +33,7 @@ namespace rtml {
         ~pool() = default;
 
         static constexpr auto k_natural_align {alignof(std::max_align_t) > 8 ? alignof(std::max_align_t) : 8};
-        static constexpr bool k_force_align {true};
+        static constexpr bool k_force_align {true}; // Always force correct alignment of allocated types
         [[nodiscard]] auto alloc_raw(std::size_t size) noexcept -> void*;
         [[nodiscard]] auto alloc_raw(std::size_t size, std::size_t align) noexcept -> void*;
         template <typename T, typename... Args>
@@ -106,8 +106,8 @@ namespace rtml {
         auto operator=(isolate&&) -> isolate& = delete;
         virtual ~isolate() = default;
 
-        [[nodiscard]] static auto global_init() -> bool;
-        static auto global_shutdown() -> void;
+        [[nodiscard]] static auto runtime_global_init() -> bool;
+        static auto init_global_runtime() -> void;
 
         [[nodiscard]] auto name() const noexcept -> const std::string& { return m_name; }
         [[nodiscard]] auto device() const noexcept -> compute_device { return m_device; }
@@ -117,7 +117,7 @@ namespace rtml {
     private:
         static inline std::unordered_map<std::string, std::shared_ptr<isolate>> s_contexts;
         static inline std::mutex s_contexts_mutex;
-        static inline constinit std::atomic_bool s_initialized;
+        static inline constinit std::atomic_bool s_runtime_initialized;
         const std::string m_name;
         const compute_device m_device;
         class pool m_pool;
