@@ -8,6 +8,8 @@
 #include <mutex>
 #include <span>
 
+#include "spdlog/fmt/bundled/format.h"
+
 namespace rtml {
     class isolate;
 
@@ -44,12 +46,26 @@ namespace rtml {
         [[nodiscard]] auto get_data_size() const noexcept -> std::size_t { return m_size; }
         [[nodiscard]] auto get_num_dims() const noexcept -> std::uint32_t { return m_num_dims; }
         [[nodiscard]] auto get_dims() const noexcept -> std::span<const std::int64_t, k_max_dims> { return m_dims; }
+        [[nodiscard]] auto get_active_dims() const noexcept -> std::span<const std::int64_t> { return {m_dims.cbegin(), m_num_dims}; }
         [[nodiscard]] auto get_strides() const noexcept -> std::span<const std::int64_t, k_max_dims> { return m_strides; }
         [[nodiscard]] auto get_slice() const noexcept -> tensor* { return m_slice; }
         [[nodiscard]] auto get_slice_offset() const noexcept -> std::size_t { return m_slice_offset; }
-        [[nodiscard]] auto get_data() const noexcept -> void* { return m_s; }
+        [[nodiscard]] auto get_data() const noexcept -> void* { return m_x.u8; }
         [[nodiscard]] auto get_name() const noexcept -> const char* { return m_name.data(); }
+        [[nodiscard]] auto is_contiguous() const noexcept -> bool;
+        [[nodiscard]] auto can_repeat(const tensor* other) const noexcept -> bool;
+        [[nodiscard]] auto row_count() const noexcept -> std::int64_t;
+        auto unroll_index(std::int64_t i, std::array<std::int64_t, k_max_dims>& dims) const noexcept -> void;
+
+        [[nodiscard]] auto isomorph() noexcept -> tensor*;
+        [[nodiscard]] auto clone() noexcept -> tensor*;
+
         auto set_name(const char* name) -> void;
+        template<typename... Args>
+        auto format_name(const fmt::format_string<Args...>& fmt, Args&&... args) -> void {
+            const std::string formatted {fmt::format(fmt, std::forward<Args>(args)...)}; // TODO: avoid clone
+            set_name(formatted.c_str());
+        }
         [[nodiscard]] auto to_string() -> std::string;
 
         tensor( // Do NOT use this constructor directly, use isolate::create_tensor instead
@@ -73,8 +89,8 @@ namespace rtml {
         tensor* m_slice {};
         std::size_t m_slice_offset {};
         union {
-            float* m_s {};
-            std::uint8_t* m_u8;
-        };
+            float* f32;
+            std::uint8_t* u8 {};
+        } m_x {};
     };
 }
