@@ -69,7 +69,7 @@ namespace rtml {
         std::ranges::fill(m_dims.begin(), m_dims.end(), 1); // Splat identity dimensions
         std::ranges::copy(dims.begin(), dims.end(), m_dims.begin()); // Copy dimensions
         m_strides[0] = static_cast<std::int64_t>(ssize);
-        for (int i {}; i < k_max_dims; ++i) // Compute strides
+        for (std::size_t i {}; i < k_max_dims; ++i) // Compute strides
             m_strides[i] = m_strides[i-1]*m_dims[i-1];
     }
 }
