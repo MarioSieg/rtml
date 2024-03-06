@@ -49,7 +49,7 @@ namespace rtml {
         [[nodiscard]] auto get_slice_offset() const noexcept -> std::size_t { return m_slice_offset; }
         [[nodiscard]] auto get_data() const noexcept -> void* { return m_s; }
         [[nodiscard]] auto get_name() const noexcept -> const char* { return m_name.data(); }
-        auto set_name(const char* name) -> void { std::strncpy(m_name.data(), name, k_max_name); }
+        auto set_name(const char* name) -> void;
         [[nodiscard]] auto to_string() -> std::string;
 
         tensor( // Do NOT use this constructor directly, use isolate::create_tensor instead

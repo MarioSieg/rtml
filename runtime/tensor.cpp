@@ -7,6 +7,11 @@
 #include <iostream>
 
 namespace rtml {
+    auto tensor::set_name(const char* const name) -> void {
+        std::strncpy(m_name.data(), name, k_max_name);
+        m_name[k_max_name-1] = '\0';
+    }
+
     auto tensor::to_string() -> std::string {
         const std::size_t total_size = m_size+sizeof(*this);
         auto size {static_cast<double>(total_size)};
