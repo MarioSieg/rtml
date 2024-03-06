@@ -47,7 +47,7 @@ namespace rtml {
             slice_offset += slice->m_slice_offset;
             slice = slice->m_slice;
         }
-        const dtype_trait& trait = k_stype_traits[static_cast<std::size_t>(type)];
+        const dtype_trait& trait {k_stype_traits[static_cast<std::size_t>(type)]};
         std::size_t datasize {trait.size};
         for (const auto dim : dims) { // Accumulate total size of tensor
             datasize *= std::max<decltype(dim)>(1, dim);
