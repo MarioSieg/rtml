@@ -43,7 +43,7 @@ namespace rtml {
         [[nodiscard]] auto get_data_type() const noexcept -> dtype { return m_dtype; }
         [[nodiscard]] auto get_data_type_traits() const noexcept -> const dtype_trait& { return k_stype_traits[static_cast<std::size_t>(m_dtype)]; }
         [[nodiscard]] auto get_id() const noexcept -> id { return m_id; }
-        [[nodiscard]] auto get_data_size() const noexcept -> std::size_t { return m_size; }
+        [[nodiscard]] auto get_data_size() const noexcept -> std::size_t { return m_datasize; }
         [[nodiscard]] auto get_num_dims() const noexcept -> std::uint32_t { return m_num_dims; }
         [[nodiscard]] auto get_dims() const noexcept -> std::span<const std::int64_t, k_max_dims> { return m_dims; }
         [[nodiscard]] auto get_active_dims() const noexcept -> std::span<const std::int64_t> { return {m_dims.cbegin(), m_num_dims}; }
@@ -59,6 +59,9 @@ namespace rtml {
 
         [[nodiscard]] auto isomorph() noexcept -> tensor*;
         [[nodiscard]] auto clone() noexcept -> tensor*;
+
+        auto fill_zero() const -> void;
+        auto fill_ones() const -> void;
 
         auto set_name(const char* name) -> void;
         template<typename... Args>
@@ -82,7 +85,7 @@ namespace rtml {
         const std::uint32_t m_id;
         std::array<char, k_max_name> m_name {}; // Tensor name - cannot use std::string because we must be trivially destructable
         const dtype m_dtype; // Tensor scalar data type
-        std::size_t m_size {}; // Tensor data size in bytes
+        std::size_t m_datasize {}; // Tensor data size in bytes
         std::uint32_t m_num_dims {}; // Number of dimensions (1-k_max_dims)
         std::array<std::int64_t, k_max_dims> m_dims {};
         std::array<std::int64_t, k_max_dims> m_strides {};

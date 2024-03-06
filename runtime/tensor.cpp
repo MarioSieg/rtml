@@ -58,14 +58,14 @@ namespace rtml {
         std::size_t datasize {trait.size};
         for (const auto dim : dims) // Accumulate total size of tensor
             datasize *= std::max<decltype(dim)>(1, dim);
-        assert(!slice || datasize+slice_offset <= slice->m_size); // Check if slice has enough space
+        assert(!slice || datasize+slice_offset <= slice->m_datasize); // Check if slice has enough space
         static constexpr bool k_align_scalar = false; // Aligned data address to scalar alignment?
         m_x.u8 = slice
             ? slice->m_x.u8+slice_offset
             : static_cast<std::uint8_t*>(k_align_scalar
                 ? m_ctx.pool().alloc_raw(datasize, trait.align)
                 : m_ctx.pool().alloc_raw(datasize)); // Point into slice data or allocate new data from pool.
-        m_size = datasize;
+        m_datasize = datasize;
         m_num_dims = dims.size();
         m_slice = slice;
         m_slice_offset = slice_offset;
@@ -90,9 +90,20 @@ namespace rtml {
             m_dtype,
             get_active_dims()
         )};
-        std::memcpy(ts->m_x.u8, m_x.u8, m_size);
+        std::memcpy(ts->m_x.u8, m_x.u8, m_datasize);
         ts->format_name("{} (clone)", m_name.data());
         return ts;
+    }
+
+    auto tensor::fill_zero() const -> void {
+        std::memset(m_x.u8, 0, m_datasize);
+    }
+
+    auto tensor::fill_ones() const -> void {
+        switch (m_dtype) {
+            case dtype::f32: std::ranges::fill(m_x.f32, m_x.f32+m_datasize/get_data_type_traits().size, 1.0f); break;
+            case dtype::$count: std::abort();
+        }
     }
 
     auto tensor::set_name(const char* const name) -> void {
@@ -102,7 +113,7 @@ namespace rtml {
 
     auto tensor::to_string() -> std::string {
         static_assert(k_max_dims == 4);
-        const std::size_t total_size = m_size+sizeof(*this);
+        const std::size_t total_size = m_datasize+sizeof(*this);
         auto size {static_cast<double>(total_size)};
         std::string_view unit {"B"};
         const auto cvt_nit {[&](const std::size_t lim, const std::string_view name) {
