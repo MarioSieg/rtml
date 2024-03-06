@@ -85,10 +85,8 @@ namespace rtml {
             if (empty()) [[unlikely]] std::abort();
             return (*this)[m_len-1];
         }
-        [[nodiscard]] auto data() noexcept -> pointer {
-            return m_storage.data();
-        }
-        [[nodiscard]] auto data() const noexcept -> const_pointer { return m_storage.data(); }
+        [[nodiscard]] auto data() noexcept -> pointer { return reinterpret_cast<T*>(m_storage.data()); }
+        [[nodiscard]] auto data() const noexcept -> const_pointer { return reinterpret_cast<const T*>(m_storage.data()); }
         [[nodiscard]] auto empty() const noexcept -> bool { return m_len == 0; }
         [[nodiscard]] auto full() const noexcept -> bool { return m_len == N; }
         [[nodiscard]] static auto max_size() noexcept -> std::size_t { return N; }
@@ -99,7 +97,7 @@ namespace rtml {
             return *new(reinterpret_cast<T*>(m_storage.data()+sizeof(T)*m_len++)) T{std::forward<Args>(args)...};
         }
         operator std::span<T> () noexcept {
-            return std::span<T>{m_storage.data(), m_len};
+            return std::span<T>{data(), m_len};
         }
         auto clear() noexcept -> void {
             if constexpr (!std::is_trivially_destructible_v<T>)
