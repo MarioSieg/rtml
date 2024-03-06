@@ -53,7 +53,7 @@ namespace rtml {
         const std::size_t pool_mem
     ) -> std::shared_ptr<isolate> {
         if (!s_initialized.load(std::memory_order::seq_cst)) [[unlikely]] {
-            rtml_log_error("RTML runtime not initialized");
+            rtml_log_warn("RTML runtime not initialized");
             std::abort();
         }
         std::unique_lock lock {s_contexts_mutex};
