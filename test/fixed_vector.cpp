@@ -8,6 +8,7 @@ using namespace rtml;
 
 TEST(fixed_vector, basic) {
     fixed_vector<int, 4> vec;
+    static_assert(sizeof(vec) == sizeof(int) * 4 + sizeof(std::size_t));
     vec.emplace_back(1);
     vec.emplace_back(2);
     vec.emplace_back(3);
