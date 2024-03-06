@@ -13,5 +13,5 @@ TEST(isolate, create) {
     ASSERT_EQ(ctx->name(), "test");
     ASSERT_EQ(ctx->device(), isolate::compute_device::cpu);
     ASSERT_EQ(ctx->pool().size(), 0x1000);
-    isolate::init_global_runtime();
+    isolate::runtime_global_shutdown();
 }

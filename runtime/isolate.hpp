@@ -107,7 +107,7 @@ namespace rtml {
         virtual ~isolate() = default;
 
         [[nodiscard]] static auto runtime_global_init() -> bool;
-        static auto init_global_runtime() -> void;
+        static auto runtime_global_shutdown() -> void;
 
         [[nodiscard]] auto name() const noexcept -> const std::string& { return m_name; }
         [[nodiscard]] auto device() const noexcept -> compute_device { return m_device; }

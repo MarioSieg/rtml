@@ -20,7 +20,7 @@ TEST(tensor, create_1d) {
     ASSERT_EQ(tensor->get_strides()[1], 25*sizeof(float));
     ASSERT_EQ(tensor->get_strides()[2], 25*sizeof(float));
     ASSERT_EQ(tensor->get_strides()[3], 25*sizeof(float));
-    isolate::init_global_runtime();
+    isolate::runtime_global_shutdown();
 }
 
 TEST(tensor, create_2d) {
@@ -37,7 +37,7 @@ TEST(tensor, create_2d) {
     ASSERT_EQ(tensor->get_strides()[1], 4*sizeof(float));
     ASSERT_EQ(tensor->get_strides()[2], 4*4*sizeof(float));
     ASSERT_EQ(tensor->get_strides()[3], 4*4*sizeof(float));
-    isolate::init_global_runtime();
+    isolate::runtime_global_shutdown();
 }
 
 TEST(tensor, create_3d) {
@@ -54,7 +54,7 @@ TEST(tensor, create_3d) {
     ASSERT_EQ(tensor->get_strides()[1], 4*sizeof(float));
     ASSERT_EQ(tensor->get_strides()[2], 4*4*sizeof(float));
     ASSERT_EQ(tensor->get_strides()[3], 4*4*8*sizeof(float));
-    isolate::init_global_runtime();
+    isolate::runtime_global_shutdown();
 }
 
 TEST(tensor, create_4d) {
@@ -71,5 +71,5 @@ TEST(tensor, create_4d) {
     ASSERT_EQ(tensor->get_strides()[1], 4*sizeof(float));
     ASSERT_EQ(tensor->get_strides()[2], 4*4*sizeof(float));
     ASSERT_EQ(tensor->get_strides()[3], 4*4*8*sizeof(float));
-    isolate::init_global_runtime();
+    isolate::runtime_global_shutdown();
 }

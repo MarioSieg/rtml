@@ -121,7 +121,7 @@ namespace rtml {
         return true;
     }
 
-    auto isolate::init_global_runtime() -> void {
+    auto isolate::runtime_global_shutdown() -> void {
         if (!s_runtime_initialized.load(std::memory_order::seq_cst)) {
             rtml_log_warn("RTML runtime not initialized");
             return;

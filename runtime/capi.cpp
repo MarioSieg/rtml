@@ -13,7 +13,7 @@ extern "C" {
     }
 
     auto rtml_global_shutdown() -> void {
-        isolate::init_global_runtime();
+        isolate::runtime_global_shutdown();
     }
 
     auto rtml_isolate_create(
