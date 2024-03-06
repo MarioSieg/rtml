@@ -7,9 +7,11 @@
 #include <string_view>
 #include <span>
 
-namespace rtml::op {
+namespace rtml {
     class tensor;
+}
 
+namespace rtml::op {
     #define rtml_co ,
     /* Opcodes: Mnemonic, Operands, Info Mnemonic */
     #define rtml_opcode_def(_, __) \
@@ -36,7 +38,7 @@ namespace rtml::op {
     #undef _
 
     #define _(mnemonic, operands, name) ((operands)&0xff)
-    static constexpr std::array<std::uint8_t, $count> k_operands {
+    static constexpr std::array<std::uint32_t, $count> k_operands {
         rtml_opcode_def(_, rtml_co)
     };
     #undef _

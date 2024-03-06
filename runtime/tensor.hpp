@@ -9,7 +9,9 @@
 #include <span>
 
 #include "fixed_vector.hpp"
-#include "spdlog/fmt/bundled/format.h"
+#include "op.hpp"
+
+#include <spdlog/spdlog.h>
 
 namespace rtml {
     class isolate;
@@ -56,6 +58,7 @@ namespace rtml {
         [[nodiscard]] auto get_operands() const noexcept -> const fixed_vector<const tensor*, k_max_operands>& { return m_operands; }
         [[nodiscard]] auto get_data() const noexcept -> void* { return m_x.u8; }
         [[nodiscard]] auto get_name() const noexcept -> const char* { return m_name.data(); }
+        [[nodiscard]] auto get_op() const noexcept -> op::opcode { return m_op; }
         [[nodiscard]] auto is_contiguous() const noexcept -> bool;
         [[nodiscard]] auto can_repeat(const tensor* other) const noexcept -> bool;
         [[nodiscard]] auto row_count() const noexcept -> std::int64_t;
@@ -91,6 +94,7 @@ namespace rtml {
         const dtype m_dtype; // Tensor scalar data type
         std::size_t m_datasize {}; // Tensor data size in bytes
         std::uint32_t m_num_dims {}; // Number of dimensions (1-k_max_dims)
+        op::opcode m_op {op::nop};
         std::array<std::int64_t, k_max_dims> m_dims {};
         std::array<std::int64_t, k_max_dims> m_strides {};
         fixed_vector<const tensor*, k_max_operands> m_operands {};
