@@ -24,6 +24,9 @@ namespace rtml::blas {
     [[nodiscard]] static constexpr auto gelu(const float x) noexcept -> float {
         return 0.5f * x * (1.0f + std::tanh(k_rtml_sqrt2pi * x * (1.0f + k_rtml_gelu_coeff * x * x)));
     }
+    [[nodiscard]] static constexpr auto silu(const float x) noexcept -> float {
+        return x / (1.0f + std::exp(-x));
+    }
 
     auto v_softmax(const std::size_t n, float* const ov, const float* const x) noexcept -> void {
         for (std::size_t i = 0; i < n; ++i) ov[i] = softmax(x[i]);
@@ -43,6 +46,10 @@ namespace rtml::blas {
 
     auto v_gelu(const std::size_t n, float* const ov, const float* const x) noexcept -> void {
         for (std::size_t i = 0; i < n; ++i) ov[i] = gelu(x[i]);
+    }
+
+    auto v_silu(const std::size_t n, float* const ov, const float* const x) noexcept -> void {
+        for (std::size_t i = 0; i < n; ++i) ov[i] = silu(x[i]);
     }
 
     auto v_add(const std::size_t n, float* const ov, const float* const x, const float* const y) noexcept -> void {

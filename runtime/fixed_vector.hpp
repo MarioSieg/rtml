@@ -67,7 +67,7 @@ namespace rtml {
             return reinterpret_cast<T&>(m_storage[sizeof(T)*index]);
         }
         [[nodiscard]] auto operator[](const std::size_t index) const noexcept -> const_reference {
-            return reinterpret_cast<T&>(m_storage[sizeof(T)*index]);
+            return reinterpret_cast<const T&>(m_storage[sizeof(T)*index]);
         }
         [[nodiscard]] auto front() noexcept -> reference {
             if (empty()) [[unlikely]] std::abort();

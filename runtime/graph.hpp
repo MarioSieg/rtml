@@ -11,7 +11,7 @@ namespace rtml {
     class tensor;
 }
 
-namespace rtml::op {
+namespace rtml::graph {
     #define rtml_co ,
     /* Opcodes: Mnemonic, Operands, Info Mnemonic */
     #define rtml_opcode_def(_, __) \
@@ -23,6 +23,7 @@ namespace rtml::op {
         _(tanh, 1, "tanh")__\
         _(relu, 1, "relu")__\
         _(gelu, 1, "gelu")__\
+        _(silu, 1, "silu")__\
         /* Binary ops */\
         _(add , 2, "+")__\
         _(sub , 2, "-")__\
@@ -51,4 +52,15 @@ namespace rtml::op {
 
     using validate_function = auto (const tensor* dst, std::span<const tensor*> src) -> bool;
     using eval_function = auto (tensor* dst, std::span<const tensor*> src) noexcept -> void;
+
+    enum class graph_eval_order : bool {
+        left_to_right,
+        right_to_left
+    };
+
+    extern auto graph_visit(
+        const tensor* root,
+        graph_eval_order order,
+        const std::function<auto (const tensor* t) -> void>& callback
+    ) -> void;
 }

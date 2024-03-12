@@ -9,18 +9,19 @@
 #include <span>
 
 #include "fixed_vector.hpp"
-#include "op.hpp"
+#include "graph.hpp"
 
 #include <spdlog/spdlog.h>
 
 namespace rtml {
     class isolate;
 
+    using dim = std::int64_t; // Dimension scalar used for dims, indices and strides.
+
     // Represents an N-dimensional (1-k_max_dims) tensor, which is also a vertex in the computation DAG.
     class tensor final {
     public:
         using id = std::uint32_t;
-        using dim = std::int64_t; // Dimension scalar used for dims, indices and strides.
         static constexpr dim k_max_dims {4};
         static constexpr std::size_t k_max_operands {2};
         static constexpr std::size_t k_max_name {128};
@@ -51,26 +52,30 @@ namespace rtml {
         [[nodiscard]] auto get_id() const noexcept -> id { return m_id; }
         [[nodiscard]] auto get_data_size() const noexcept -> std::size_t { return m_datasize; }
         [[nodiscard]] auto get_num_dims() const noexcept -> std::uint32_t { return m_num_dims; }
-        [[nodiscard]] auto get_dims() const noexcept -> std::span<const dim, k_max_dims> { return m_dims; }
-        [[nodiscard]] auto get_active_dims() const noexcept -> std::span<const dim> { return {m_dims.cbegin(), m_num_dims}; }
-        [[nodiscard]] auto get_strides() const noexcept -> std::span<const dim, k_max_dims> { return m_strides; }
+        [[nodiscard]] auto get_dims() const noexcept -> const std::array<dim, k_max_dims>& { return m_shape; }
+        [[nodiscard]] auto get_active_dims() const noexcept -> std::span<const dim> { return {m_shape.cbegin(), m_num_dims}; }
+        [[nodiscard]] auto get_strides() const noexcept -> const std::array<dim, k_max_dims>& { return m_strides; }
         [[nodiscard]] auto get_slice() const noexcept -> tensor* { return m_slice; }
         [[nodiscard]] auto get_slice_offset() const noexcept -> std::size_t { return m_slice_offset; }
         [[nodiscard]] auto get_operands() noexcept -> fixed_vector<const tensor*, k_max_operands>& { return m_operands; }
         [[nodiscard]] auto get_operands() const noexcept -> const fixed_vector<const tensor*, k_max_operands>& { return m_operands; }
-        [[nodiscard]] auto get_data() const noexcept -> void* { return m_x.u8; }
+        [[nodiscard]] auto get_data() const noexcept -> std::uint8_t* { return m_x.u8; }
         [[nodiscard]] auto get_name() const noexcept -> const char* { return m_name.data(); }
-        [[nodiscard]] auto get_op() const noexcept -> op::opcode { return m_op; }
+        [[nodiscard]] auto get_op() const noexcept -> graph::opcode { return m_op; }
         [[nodiscard]] auto is_contiguous() const noexcept -> bool;
+        [[nodiscard]] auto is_contiguous_except_dim1() const noexcept -> bool;
         [[nodiscard]] auto can_repeat(const tensor* other) const noexcept -> bool;
+        [[nodiscard]] auto is_shape_eq(const tensor* other) const noexcept -> bool;
         [[nodiscard]] auto row_count() const noexcept -> dim;
-        auto unroll_index(dim i) const noexcept -> std::array<dim, k_max_dims>;
+        [[nodiscard]] auto col_count() const noexcept -> dim;
+        [[nodiscard]] auto unroll_index(dim i) const noexcept -> std::array<dim, k_max_dims>;
 
         [[nodiscard]] auto isomorph() noexcept -> tensor*;
         [[nodiscard]] auto clone() noexcept -> tensor*;
 
         auto fill_zero() const -> void;
         auto fill_ones() const -> void;
+        auto push_operand(const tensor* x) -> void;
 
         auto set_name(const char* name) -> void;
         template<typename... Args>
@@ -90,18 +95,18 @@ namespace rtml {
         ) noexcept;
 
     private:
-        isolate& m_ctx;
-        const std::uint32_t m_id;
+        isolate& m_ctx; // Associated isolate
+        const std::uint32_t m_id; // Unique id
         std::array<char, k_max_name> m_name {}; // Tensor name - cannot use std::string because we must be trivially destructable
         const dtype m_dtype; // Tensor scalar data type
         std::size_t m_datasize {}; // Tensor data size in bytes
         std::uint32_t m_num_dims {}; // Number of dimensions (1-k_max_dims)
-        op::opcode m_op {op::nop};
-        std::array<dim, k_max_dims> m_dims {};
-        std::array<dim, k_max_dims> m_strides {};
-        fixed_vector<const tensor*, k_max_operands> m_operands {};
-        tensor* m_slice {};
-        std::size_t m_slice_offset {};
+        graph::opcode m_op {graph::nop}; // Operation code
+        std::array<dim, k_max_dims> m_shape {}; // 4D dimensions - tensor shape
+        std::array<dim, k_max_dims> m_strides {}; // 4D byte strides
+        fixed_vector<const tensor*, k_max_operands> m_operands {}; // Tensor operation operands
+        tensor* m_slice {}; // Sliced base tensor, if any
+        std::size_t m_slice_offset {}; // Memory offset into sliced base tensor's data
         union {
             float* f32;
             std::uint8_t* u8 {};

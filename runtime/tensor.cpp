@@ -10,33 +10,52 @@ namespace rtml {
     auto tensor::is_contiguous() const noexcept -> bool {
         static_assert(k_max_dims == 4);
         return
-            m_strides[0] == get_data_type_traits().size &&
-            m_strides[1] == m_strides[0] * m_dims[0]    &&
-            m_strides[2] == m_strides[1] * m_dims[1]    &&
-            m_strides[3] == m_strides[2] * m_dims[2];
+            m_strides[0] == get_data_type_traits().size && // Check if strides are contiguous
+            m_strides[1] == m_strides[0] * m_shape[0] &&
+            m_strides[2] == m_strides[1] * m_shape[1] &&
+            m_strides[3] == m_strides[2] * m_shape[2];
+    }
+
+    auto tensor::is_contiguous_except_dim1() const noexcept -> bool {
+        return
+            m_strides[0] == get_data_type_traits().size && // Check if strides are contiguous
+            m_strides[2] == m_strides[1] * m_shape[1] &&
+            m_strides[3] == m_strides[2] * m_shape[2];
     }
 
     auto tensor::can_repeat(const tensor* const other) const noexcept -> bool {
         static_assert(k_max_dims == 4);
         return
-            other->m_dims[0] % m_dims[0] == 0 &&
-            other->m_dims[1] % m_dims[1] == 0 &&
-            other->m_dims[2] % m_dims[2] == 0 &&
-            other->m_dims[3] % m_dims[3] == 0;
+            other->m_shape[0] % m_shape[0] == 0 && // Check if other's dimensions are divisible by this tensor's dimensions
+            other->m_shape[1] % m_shape[1] == 0 &&
+            other->m_shape[2] % m_shape[2] == 0 &&
+            other->m_shape[3] % m_shape[3] == 0;
+    }
+
+    auto tensor::is_shape_eq(const tensor* const other) const noexcept -> bool {
+        if (this == other)
+            return true;
+        if (m_num_dims == other->m_num_dims)
+            return std::equal(m_shape.cbegin(), m_shape.cbegin()+m_num_dims, other->m_shape.cbegin());
+        return false;
     }
 
     auto tensor::row_count() const noexcept -> dim {
         static_assert(k_max_dims == 4);
-        return m_dims[1] * m_dims[2] * m_dims[3];
+        return m_shape[1] * m_shape[2] * m_shape[3];
+    }
+
+    auto tensor::col_count() const noexcept -> dim {
+        return m_shape[0];
     }
 
     auto tensor::unroll_index(const dim i) const noexcept -> std::array<dim, k_max_dims> {
         static_assert(k_max_dims == 4);
-        const dim d0 {m_dims[0]};
-        const dim d1 {m_dims[1]};
-        const dim d2 {m_dims[2]};
+        const dim d0 {m_shape[0]};
+        const dim d1 {m_shape[1]};
+        const dim d2 {m_shape[2]};
         std::array<dim, k_max_dims> dims {};
-        dims[3] =  i / (d2 * d1 * d0);
+        dims[3] =  i / (d2 * d1 * d0); // Unroll index into dimensions
         dims[2] = (i - dims[3] * d2 * d1 * d0) / (d1 * d0);
         dims[1] = (i - dims[3] * d2 * d1 * d0 - dims[2] * d1 * d0) / d0;
         dims[0] =  i - dims[3] * d2 * d1 * d0 - dims[2] * d1 * d0 - dims[1] * d0;
@@ -71,11 +90,11 @@ namespace rtml {
         m_num_dims = dims.size();
         m_slice = slice;
         m_slice_offset = slice_offset;
-        std::ranges::fill(m_dims.begin(), m_dims.end(), 1); // Splat identity dimensions
-        std::ranges::copy(dims.begin(), dims.end(), m_dims.begin()); // Copy dimensions
+        std::ranges::fill(m_shape.begin(), m_shape.end(), 1); // Splat identity dimensions
+        std::ranges::copy(dims.begin(), dims.end(), m_shape.begin()); // Copy dimensions
         m_strides[0] = static_cast<dim>(dtype_inf.size);
         for (std::size_t i {1}; i < k_max_dims; ++i) // Compute strides
-            m_strides[i] = m_strides[i-1]*m_dims[i-1];
+            m_strides[i] = m_strides[i-1]*m_shape[i-1];
     }
 
     auto tensor::isomorph() noexcept -> tensor* {
@@ -108,6 +127,11 @@ namespace rtml {
         }
     }
 
+    auto tensor::push_operand(const tensor* const x) -> void {
+        assert(x != nullptr && m_operands.size() < k_max_operands);
+        m_operands.emplace_back(x);
+    }
+
     auto tensor::set_name(const char* const name) -> void {
         std::strncpy(m_name.data(), name, k_max_name);
         m_name[k_max_name-1] = '\0';
@@ -132,10 +156,10 @@ namespace rtml {
             m_name.data(),
             m_num_dims,
             get_data_type_traits().name,
-            m_dims[0],
-            m_dims[1],
-            m_dims[2],
-            m_dims[3],
+            m_shape[0],
+            m_shape[1],
+            m_shape[2],
+            m_shape[3],
             size,
             unit
         );
