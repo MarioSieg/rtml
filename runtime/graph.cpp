@@ -97,90 +97,41 @@ namespace rtml::graph {
             ); \
         }
 
-    template <typename T>
-    concept tensor_scalar = requires {
-        std::is_arithmetic_v<T>;
-    };
-
-    // Implementation of an optimized binary tensor operation evaluator
-    template <typename T> requires tensor_scalar<T>
-    auto eval_tensor_op(tensor* const dst, const std::span<const tensor*> src) noexcept -> void {
-        tensor* const r {dst};
-        const tensor* const x {src[0]};
-        const tensor* const y {src[1]};
-        std::uint8_t* const pr {r->get_data()};
-        const std::uint8_t* const px {x->get_data()};
-        const std::uint8_t* const py {y->get_data()};
-        const dim num_rows {r->row_count()};
-        const auto [x_d0, x_d1, x_d2, x_d3] {x->get_dims()};
-        const auto [x_s0, x_s1, x_s2, x_s3] {x->get_strides()};
-        const auto [y_d0, y_d1, y_d2, y_d3] {y->get_dims()};
-        const auto [y_s0, y_s1, y_s2, y_s3] {y->get_strides()};
-        const auto [r_d0, r_d1, r_d2, r_d3] {r->get_dims()};
-        const auto [r_s0, r_s1, r_s2, r_s3] {r->get_strides()};
-        if (y_s0 == sizeof(T)) { // Tensor x has a contigous memory layout
-            for (dim row_i {}; row_i < num_rows; ++row_i) {
-                const dim x_i3 {row_i / (x_d2*x_d1)}; // Unroll index into dimensions
-                const dim x_i2 {(row_i - x_i3*x_d2*x_d1) / x_d1};
-                const dim x_i1 {row_i - x_i3*x_d2*x_d1 - x_i2*x_d1};
-                const dim y_i3 {x_i3 % y_d3}; // Broadcast
-                const dim y_i2 {x_i2 % y_d2}; // Broadcast
-                const dim y_i1 {x_i1 % y_d1}; // Broadcast
-                T* const pdst {reinterpret_cast<T*>(pr + x_i3*r_s3 + x_i2*r_s2 + x_i1*r_s1)};
-                const T* const psrc0 {reinterpret_cast<const T*>(px + x_i3*x_s3 + x_i2*x_s2 + x_i1*x_s1)};
-                const T* const psrc1 {reinterpret_cast<const T*>(py + y_i3*y_s3 + y_i2*y_s2 + y_i1*y_s1)};
-                for (dim v {}; v < x_d0 / y_d0; ++v) // Vector operation between contiguous rows
-                    blas::v_add(y_d0, pdst + v*y_d0, psrc0 + v*y_d0, psrc1);
-            }
-        } else {
-            for (dim row_i {}; row_i < num_rows; ++row_i) {
-                const dim x_i3 {row_i/(x_d2*x_d1)}; // Unroll index into dimensions
-                const dim x_i2 {(row_i - x_i3*x_d2*x_d1)/x_d1};
-                const dim x_i1 {row_i - x_i3*x_d2*x_d1 - x_i2*x_d1};
-                const dim y_i3 {x_i3 % y_d3}; // Broadcast
-                const dim y_i2 {x_i2 % y_d2}; // Broadcast
-                const dim y_i1 {x_i1 % y_d1}; // Broadcast
-                T* const pdst {reinterpret_cast<T*>(pr + x_i3*r_s3 + x_i2*r_s2 + x_i1*r_s1)};
-                const T* const psrc0 {reinterpret_cast<const T*>(px + x_i3*x_s3 + x_i2*x_s2 + x_i1*x_s1)};
-                for (dim i {}; i < r_d0; ++i) { // Scalar operation
-                    const dim i10 {i % y_d0};
-                    const T *p1 = reinterpret_cast<const T*>(py + y_i3*y_s3 + y_i2*y_s2 + y_i1*y_s1 + i10*y_s0);
-                    pdst[i] = psrc0[i] + *p1;
-                }
-            }
-        }
-    }
-
     static constexpr eval_function* const k_evaluators[] {
         [nop] = [](tensor* const dst, const std::span<const tensor*> src) noexcept -> void {
         },
         [softmax] = [](tensor* const dst, const std::span<const tensor*> src) noexcept -> void {
-            impl_eval_unary(v_softmax)
+            impl_eval_unary(v_f32_softmax)
         },
         [sigmoid] = [](tensor* const dst, const std::span<const tensor*> src) noexcept -> void {
-            impl_eval_unary(v_sigmoid)
+            impl_eval_unary(v_f32_sigmoid)
         },
         [tanh] = [](tensor* const dst, const std::span<const tensor*> src) noexcept -> void {
-            impl_eval_unary(v_tanh)
+            impl_eval_unary(v_f32_tanh)
         },
         [relu] = [](tensor* const dst, const std::span<const tensor*> src) noexcept -> void {
-            impl_eval_unary(v_relu)
+            impl_eval_unary(v_f32_relu)
         },
         [gelu] = [](tensor* const dst, const std::span<const tensor*> src) noexcept -> void {
-            impl_eval_unary(v_gelu)
+            impl_eval_unary(v_f32_gelu)
         },
         [silu] = [](tensor* const dst, const std::span<const tensor*> src) noexcept -> void {
-            impl_eval_unary(v_silu)
+            impl_eval_unary(v_f32_silu)
         },
         [add] = [](tensor* const dst, const std::span<const tensor*> src) noexcept -> void {
+            blas::t_f32_add(*dst, *src[0], *src[1]);
         },
         [sub] = [](tensor* const dst, const std::span<const tensor*> src) noexcept -> void {
+            blas::t_f32_sub(*dst, *src[0], *src[1]);
         },
         [mul] = [](tensor* const dst, const std::span<const tensor*> src) noexcept -> void {
+            blas::t_f32_mul(*dst, *src[0], *src[1]);
         },
         [div] = [](tensor* const dst, const std::span<const tensor*> src) noexcept -> void {
+            blas::t_f32_div(*dst, *src[0], *src[1]);
         },
         [matmul] = [](tensor* const dst, const std::span<const tensor*> src) noexcept -> void {
+            blas::t_f32_matmul(*dst, *src[0], *src[1]);
         },
     };
     static_assert(std::size(k_evaluators) == $count);

@@ -18,6 +18,7 @@ namespace rtml {
 
     using dim = std::int64_t; // Dimension scalar used for dims, indices and strides.
 
+
     // Represents an N-dimensional (1-k_max_dims) tensor, which is also a vertex in the computation DAG.
     class tensor final {
     public:
@@ -66,6 +67,7 @@ namespace rtml {
         [[nodiscard]] auto is_contiguous_except_dim1() const noexcept -> bool;
         [[nodiscard]] auto can_repeat(const tensor* other) const noexcept -> bool;
         [[nodiscard]] auto is_shape_eq(const tensor* other) const noexcept -> bool;
+        [[nodiscard]] auto is_matmul_compatible(const tensor* other) const noexcept -> bool;
         [[nodiscard]] auto row_count() const noexcept -> dim;
         [[nodiscard]] auto col_count() const noexcept -> dim;
         [[nodiscard]] auto unroll_index(dim i) const noexcept -> std::array<dim, k_max_dims>;

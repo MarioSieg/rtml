@@ -40,6 +40,12 @@ namespace rtml {
         return false;
     }
 
+    auto tensor::is_matmul_compatible(const tensor* const other) const noexcept -> bool {
+        return m_shape[0] == other->m_shape[0] && // Check if matrix multiplication is compatible
+            other->m_shape[2] % m_shape[2] == 0 &&
+            other->m_shape[3] % m_shape[3] == 0;
+    }
+
     auto tensor::row_count() const noexcept -> dim {
         static_assert(k_max_dims == 4);
         return m_shape[1] * m_shape[2] * m_shape[3];
@@ -55,10 +61,10 @@ namespace rtml {
         const dim d1 {m_shape[1]};
         const dim d2 {m_shape[2]};
         std::array<dim, k_max_dims> dims {};
-        dims[3] =  i / (d2 * d1 * d0); // Unroll index into dimensions
-        dims[2] = (i - dims[3] * d2 * d1 * d0) / (d1 * d0);
-        dims[1] = (i - dims[3] * d2 * d1 * d0 - dims[2] * d1 * d0) / d0;
-        dims[0] =  i - dims[3] * d2 * d1 * d0 - dims[2] * d1 * d0 - dims[1] * d0;
+        dims[3] =  i / (d2*d1*d0); // Unroll index into dimensions
+        dims[2] = (i - dims[3]*d2*d1*d0) / (d1*d0);
+        dims[1] = (i - dims[3]*d2*d1*d0 - dims[2]*d1*d0) / d0;
+        dims[0] =  i - dims[3]*d2*d1*d0 - dims[2]*d1*d0 - dims[1] * d0;
         return dims;
     }
 

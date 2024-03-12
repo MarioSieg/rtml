@@ -29,10 +29,10 @@ using namespace rtml;
         } \
     }
 
-impl_blas_test(add, +)
-impl_blas_test(sub, -)
-impl_blas_test(mul, *)
-impl_blas_test(div, /)
+impl_blas_test(f32_add, +)
+impl_blas_test(f32_sub, -)
+impl_blas_test(f32_mul, *)
+impl_blas_test(f32_div, /)
 
 TEST(blas, dot) {
     std::vector<float> a {}, b{};
@@ -47,7 +47,7 @@ TEST(blas, dot) {
     }
     float r {};
     double acc {};
-    blas::v_dot(N, &r, a.data(), b.data());
+    blas::v_f32_dot(N, &r, a.data(), b.data());
     for (std::size_t i {}; i < N; ++i) {
         acc += static_cast<double>(a[i] * b[i]);
     }
