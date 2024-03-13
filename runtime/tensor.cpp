@@ -65,12 +65,16 @@ namespace rtml {
         const dim d0 {m_shape[0]};
         const dim d1 {m_shape[1]};
         const dim d2 {m_shape[2]};
-        std::array<dim, k_max_dims> dims {};
-        dims[3] =  i / (d2*d1*d0); // Unroll index into dimensions
-        dims[2] = (i - dims[3]*d2*d1*d0) / (d1*d0);
-        dims[1] = (i - dims[3]*d2*d1*d0 - dims[2]*d1*d0) / d0;
-        dims[0] =  i - dims[3]*d2*d1*d0 - dims[2]*d1*d0 - dims[1] * d0;
-        return dims;
+        const dim lambda {i / (d2*d1*d0)}; // Unroll index into dimensions
+        const dim zeta {(i - lambda*d2*d1*d0) / (d1*d0)};
+        const dim eta {(i - lambda*d2*d1*d0 - zeta*d1*d0) / d0};
+        const dim xi {i - lambda*d2*d1*d0 - zeta*d1*d0 - eta * d0};
+        return {
+            xi,
+            zeta,
+            eta,
+            lambda
+        };
     }
 
     auto tensor::operator()(const std::array<dim, k_max_dims>& indices) const noexcept -> float& {
