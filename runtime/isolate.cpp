@@ -13,6 +13,7 @@ namespace rtml {
     pool::pool(const std::size_t size) : m_size{size}, m_storage{new std::uint8_t[size]} {
         if (!size) [[unlikely]]
             std::abort();
+        rtml_log_info("Created linear memory pool of size {:.01f} MiB", static_cast<double>(size)/std::pow(1024.0, 2.0));
         m_bot = m_storage.get() + size;
     }
 
@@ -56,22 +57,7 @@ namespace rtml {
             rtml_log_warn("RTML runtime not initialized");
             std::abort();
         }
-        std::unique_lock lock {s_contexts_mutex};
-        return s_contexts.emplace(std::string{name}, std::make_shared<context_proxy>(std::move(name), device, pool_mem)).first->second;
-    }
-
-    auto isolate::exists(const std::string& name) -> bool {
-        std::unique_lock lock {s_contexts_mutex};
-        return s_contexts.contains(name);
-    }
-
-    auto isolate::get(const std::string& name) -> std::shared_ptr<isolate> {
-        std::unique_lock lock {s_contexts_mutex};
-        return s_contexts.at(name);
-    }
-
-    auto isolate::get_all() -> const std::unordered_map<std::string, std::shared_ptr<isolate>>& {
-        return s_contexts;
+        return std::make_shared<context_proxy>(std::move(name), device, pool_mem);
     }
 
     auto isolate::create_tensor(
@@ -105,10 +91,10 @@ namespace rtml {
         return &*m_tensors[id];
     }
 
-    auto isolate::runtime_global_init() -> bool {
+    auto isolate::init_rtml_runtime() -> bool {
         if (s_runtime_initialized.load(std::memory_order::seq_cst)) {
             rtml_log_warn("RTML runtime already initialized");
-            return false;
+            return true;
         }
 #if RTML_LOG_ENABLE
         std::iostream::sync_with_stdio(false);
@@ -121,7 +107,7 @@ namespace rtml {
         return true;
     }
 
-    auto isolate::runtime_global_shutdown() -> void {
+    auto isolate::shutdown_rtml_runtime() -> void {
         if (!s_runtime_initialized.load(std::memory_order::seq_cst)) {
             rtml_log_warn("RTML runtime not initialized");
             return;

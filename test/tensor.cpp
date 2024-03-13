@@ -7,7 +7,6 @@
 using namespace rtml;
 
 TEST(tensor, create_1d) {
-    ASSERT_TRUE(isolate::runtime_global_init());
     auto ctx = isolate::create("test", isolate::compute_device::cpu, 0x1000);
     tensor* tensor = ctx->create_tensor(tensor::dtype::f32, {25});
     ASSERT_EQ(tensor->get_num_dims(), 1);
@@ -20,11 +19,9 @@ TEST(tensor, create_1d) {
     ASSERT_EQ(tensor->get_strides()[1], 25*sizeof(float));
     ASSERT_EQ(tensor->get_strides()[2], 25*sizeof(float));
     ASSERT_EQ(tensor->get_strides()[3], 25*sizeof(float));
-    isolate::runtime_global_shutdown();
 }
 
 TEST(tensor, create_2d) {
-    ASSERT_TRUE(isolate::runtime_global_init());
     auto ctx = isolate::create("test", isolate::compute_device::cpu, 0x1000);
     tensor* tensor = ctx->create_tensor(tensor::dtype::f32, {4, 4});
     ASSERT_EQ(tensor->get_num_dims(), 2);
@@ -37,11 +34,9 @@ TEST(tensor, create_2d) {
     ASSERT_EQ(tensor->get_strides()[1], 4*sizeof(float));
     ASSERT_EQ(tensor->get_strides()[2], 4*4*sizeof(float));
     ASSERT_EQ(tensor->get_strides()[3], 4*4*sizeof(float));
-    isolate::runtime_global_shutdown();
 }
 
 TEST(tensor, create_3d) {
-    ASSERT_TRUE(isolate::runtime_global_init());
     auto ctx = isolate::create("test", isolate::compute_device::cpu, 0x1000);
     tensor* tensor = ctx->create_tensor(tensor::dtype::f32, {4, 4, 8});
     ASSERT_EQ(tensor->get_num_dims(), 3);
@@ -54,11 +49,9 @@ TEST(tensor, create_3d) {
     ASSERT_EQ(tensor->get_strides()[1], 4*sizeof(float));
     ASSERT_EQ(tensor->get_strides()[2], 4*4*sizeof(float));
     ASSERT_EQ(tensor->get_strides()[3], 4*4*8*sizeof(float));
-    isolate::runtime_global_shutdown();
 }
 
 TEST(tensor, create_4d) {
-    ASSERT_TRUE(isolate::runtime_global_init());
     auto ctx = isolate::create("test", isolate::compute_device::cpu, 0x1000);
     tensor* tensor = ctx->create_tensor(tensor::dtype::f32, {4, 4, 8, 3});
     ASSERT_EQ(tensor->get_num_dims(), 4);
@@ -71,5 +64,4 @@ TEST(tensor, create_4d) {
     ASSERT_EQ(tensor->get_strides()[1], 4*sizeof(float));
     ASSERT_EQ(tensor->get_strides()[2], 4*4*sizeof(float));
     ASSERT_EQ(tensor->get_strides()[3], 4*4*8*sizeof(float));
-    isolate::runtime_global_shutdown();
 }

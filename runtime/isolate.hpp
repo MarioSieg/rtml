@@ -80,9 +80,6 @@ namespace rtml {
             compute_device device,
             std::size_t pool_mem
         ) -> std::shared_ptr<isolate>;
-        [[nodiscard]] static auto exists(const std::string& name) -> bool;
-        [[nodiscard]] static auto get(const std::string& name) -> std::shared_ptr<isolate>;
-        [[nodiscard]] static auto get_all() -> const std::unordered_map<std::string, std::shared_ptr<isolate>>&;
         [[nodiscard]] auto create_tensor(
             tensor::dtype type,
             std::span<const std::int64_t> dims,
@@ -106,8 +103,8 @@ namespace rtml {
         auto operator=(isolate&&) -> isolate& = delete;
         virtual ~isolate() = default;
 
-        [[nodiscard]] static auto runtime_global_init() -> bool;
-        static auto runtime_global_shutdown() -> void;
+        [[nodiscard]] static auto init_rtml_runtime() -> bool;
+        static auto shutdown_rtml_runtime() -> void;
 
         [[nodiscard]] auto name() const noexcept -> const std::string& { return m_name; }
         [[nodiscard]] auto device() const noexcept -> compute_device { return m_device; }
@@ -115,8 +112,6 @@ namespace rtml {
         [[nodiscard]] auto pool() noexcept -> class pool& { return m_pool; }
 
     private:
-        static inline std::unordered_map<std::string, std::shared_ptr<isolate>> s_contexts;
-        static inline std::mutex s_contexts_mutex;
         static inline constinit std::atomic_bool s_runtime_initialized;
         const std::string m_name;
         const compute_device m_device;

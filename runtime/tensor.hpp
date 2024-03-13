@@ -70,13 +70,17 @@ namespace rtml {
         [[nodiscard]] auto is_matmul_compatible(const tensor* other) const noexcept -> bool;
         [[nodiscard]] auto row_count() const noexcept -> dim;
         [[nodiscard]] auto col_count() const noexcept -> dim;
+        [[nodiscard]] auto elem_count() const noexcept -> dim;
         [[nodiscard]] auto unroll_index(dim i) const noexcept -> std::array<dim, k_max_dims>;
+        [[nodiscard]] auto get_scalar(const std::array<dim, k_max_dims>& indices) const noexcept -> float&;
+        [[nodiscard]] auto get_scalar(dim i) const noexcept -> float&;
 
         [[nodiscard]] auto isomorph() noexcept -> tensor*;
         [[nodiscard]] auto clone() noexcept -> tensor*;
 
-        auto fill_zero() const -> void;
-        auto fill_ones() const -> void;
+        auto splat_zero() const -> void;
+        auto splat_one() const -> void;
+        auto splat(float x) const -> void;
         auto push_operand(const tensor* x) -> void;
 
         auto set_name(const char* name) -> void;
@@ -85,7 +89,8 @@ namespace rtml {
             const std::string formatted {fmt::format(fmt, std::forward<Args>(args)...)}; // TODO: avoid clone
             set_name(formatted.c_str());
         }
-        [[nodiscard]] auto to_string() -> std::string;
+        [[nodiscard]] auto to_string(std::size_t with_data_elems = 0) const -> std::string;
+        auto print(std::size_t with_data_elems = 0) const -> void;
 
         tensor( // Do NOT use this constructor directly, use isolate::create_tensor instead
           isolate& ctx,

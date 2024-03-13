@@ -275,7 +275,6 @@ namespace rtml::blas {
             const dim ir111 {std::min(ir110+dr1, nr1)};
 
             // block tiling
-            //
             static constexpr dim block_x {16};
             static constexpr dim block_y {16};
             for (dim iir1 {ir110}; iir1 < ir111; iir1 += block_y) { // outer kernel

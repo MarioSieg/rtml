@@ -55,6 +55,11 @@ namespace rtml {
         return m_shape[0];
     }
 
+    auto tensor::elem_count() const noexcept -> dim {
+        static_assert(k_max_dims == 4);
+        return m_shape[0] * m_shape[1] * m_shape[2] * m_shape[3];
+    }
+
     auto tensor::unroll_index(const dim i) const noexcept -> std::array<dim, k_max_dims> {
         static_assert(k_max_dims == 4);
         const dim d0 {m_shape[0]};
@@ -66,6 +71,23 @@ namespace rtml {
         dims[1] = (i - dims[3]*d2*d1*d0 - dims[2]*d1*d0) / d0;
         dims[0] =  i - dims[3]*d2*d1*d0 - dims[2]*d1*d0 - dims[1] * d0;
         return dims;
+    }
+
+    auto tensor::get_scalar(const std::array<dim, k_max_dims>& indices) const noexcept -> float& {
+        return *reinterpret_cast<float*>(
+            m_x.u8 +
+            indices[3]*m_strides[3] +
+            indices[2]*m_strides[2] +
+            indices[1]*m_strides[1] +
+            indices[0]*m_strides[0]
+        );
+    }
+
+    auto tensor::get_scalar(const dim i) const noexcept -> float& {
+        if (is_contiguous()) {
+            return m_x.f32[i];
+        }
+        return get_scalar(unroll_index(i));
     }
 
     tensor::tensor(
@@ -122,13 +144,17 @@ namespace rtml {
         return ts;
     }
 
-    auto tensor::fill_zero() const -> void {
+    auto tensor::splat_zero() const -> void {
         std::memset(m_x.u8, 0, m_datasize);
     }
 
-    auto tensor::fill_ones() const -> void {
+    auto tensor::splat_one() const -> void {
+        splat(1.0f);
+    }
+
+    auto tensor::splat(const float x) const -> void {
         switch (m_dtype) {
-            case dtype::f32: std::ranges::fill(m_x.f32, m_x.f32+m_datasize/get_data_type_traits().size, 1.0f); break;
+            case dtype::f32: std::ranges::fill(m_x.f32, m_x.f32+m_datasize/get_data_type_traits().size, x); break;
             case dtype::$count: std::abort();
         }
     }
@@ -143,7 +169,7 @@ namespace rtml {
         m_name[k_max_name-1] = '\0';
     }
 
-    auto tensor::to_string() -> std::string {
+    auto tensor::to_string(const std::size_t with_data_elems) const -> std::string {
         static_assert(k_max_dims == 4);
         const std::size_t total_size = m_datasize+sizeof(*this);
         auto size {static_cast<double>(total_size)};
@@ -157,17 +183,42 @@ namespace rtml {
         cvt_nit(1<<10, "KiB");
         cvt_nit(1<<20, "MiB");
         cvt_nit(1<<30, "GiB");
-        return fmt::format(
-            "Tensor '{}' {}D {} [{} X {} X {} X {}] {:.03f} {}",
+        std::string fmt {};
+        fmt.reserve(0x100+sizeof("2.000")*with_data_elems);
+        fmt += fmt::format(
+            "Tensor '{}', {} * {}D, Shape [{} X {} X {} X {}], Strides [{} X {} X {} X {}] {:.01f}{}",
             m_name.data(),
-            m_num_dims,
             get_data_type_traits().name,
+            m_num_dims,
             m_shape[0],
             m_shape[1],
             m_shape[2],
             m_shape[3],
+            m_strides[0],
+            m_strides[1],
+            m_strides[2],
+            m_strides[3],
             size,
             unit
         );
+        if (with_data_elems > 0) {
+            fmt += "\n[\n";
+            for (dim i3 {}; i3 < m_shape[2]; ++i3) {
+                for (dim i2 {}; i2 < m_shape[1]; ++i2) {
+                    fmt.push_back('\t');
+                    for (dim i1 {}; i1 < m_shape[0]; ++i1) {
+                        const float x {m_x.f32[i3*m_shape[1]*m_shape[0] + i2*m_shape[0] + i1]};
+                        fmt += fmt::format("{:.03f} ", x);
+                    }
+                    fmt.push_back('\n');
+                }
+            }
+            fmt += "\t...\n]";
+        }
+        return fmt;
+    }
+
+    auto tensor::print(const std::size_t with_data_elems) const -> void {
+        std::cout << to_string(with_data_elems) << std::endl;
     }
 }

@@ -7,11 +7,9 @@
 using namespace rtml;
 
 TEST(isolate, create) {
-    ASSERT_TRUE(isolate::runtime_global_init());
     auto ctx = isolate::create("test", isolate::compute_device::cpu, 0x1000);
     ASSERT_NE(ctx, nullptr);
     ASSERT_EQ(ctx->name(), "test");
     ASSERT_EQ(ctx->device(), isolate::compute_device::cpu);
     ASSERT_EQ(ctx->pool().size(), 0x1000);
-    isolate::runtime_global_shutdown();
 }
