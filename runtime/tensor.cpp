@@ -7,18 +7,18 @@
 #include <iostream>
 
 namespace rtml {
-    auto tensor::is_contiguous() const noexcept -> bool {
+    auto tensor::is_dense() const noexcept -> bool {
         static_assert(k_max_dims == 4);
         return
-            m_strides[0] == get_data_type_traits().size && // Check if strides are contiguous
+            m_strides[0] == datatype_traits().size && // Check if strides are contiguous
             m_strides[1] == m_strides[0] * m_shape[0] &&
             m_strides[2] == m_strides[1] * m_shape[1] &&
             m_strides[3] == m_strides[2] * m_shape[2];
     }
 
-    auto tensor::is_contiguous_except_dim1() const noexcept -> bool {
+    auto tensor::is_dense_except_dim1() const noexcept -> bool {
         return
-            m_strides[0] == get_data_type_traits().size && // Check if strides are contiguous
+            m_strides[0] == datatype_traits().size && // Check if strides are contiguous
             m_strides[2] == m_strides[1] * m_shape[1] &&
             m_strides[3] == m_strides[2] * m_shape[2];
     }
@@ -73,7 +73,7 @@ namespace rtml {
         return dims;
     }
 
-    auto tensor::get_scalar(const std::array<dim, k_max_dims>& indices) const noexcept -> float& {
+    auto tensor::operator()(const std::array<dim, k_max_dims>& indices) const noexcept -> float& {
         return *reinterpret_cast<float*>(
             m_x.u8 +
             indices[3]*m_strides[3] +
@@ -83,21 +83,20 @@ namespace rtml {
         );
     }
 
-    auto tensor::get_scalar(const dim i) const noexcept -> float& {
-        if (is_contiguous()) {
+    auto tensor::operator()(const dim i) const noexcept -> float& {
+        if (is_dense()) {
             return m_x.f32[i];
         }
-        return get_scalar(unroll_index(i));
+        return (*this)(unroll_index(i));
     }
 
     tensor::tensor(
         isolate& ctx,
-        const std::uint32_t id,
         dtype type,
         const std::span<const dim> dims,
         tensor* slice,
         std::size_t slice_offset
-    ) noexcept : m_ctx{ctx}, m_id{id}, m_dtype{type} {
+    ) noexcept : m_ctx{ctx}, m_dtype{type} {
         assert(!dims.empty() && dims.size() <= k_max_dims);
         if (slice && slice->m_slice) { // Account for if slice itself is also a slice
             slice_offset += slice->m_slice_offset;
@@ -125,10 +124,10 @@ namespace rtml {
             m_strides[i] = m_strides[i-1]*m_shape[i-1];
     }
 
-    auto tensor::isomorph() noexcept -> tensor* {
+    auto tensor::isomorphic() noexcept -> tensor* {
         auto* const ts {m_ctx.create_tensor(
             m_dtype,
-            get_active_dims()
+            used_dims()
         )};
         ts->format_name("{} (isomorph)", m_name.data());
         return ts;
@@ -137,7 +136,7 @@ namespace rtml {
     auto tensor::clone() noexcept -> tensor* {
         auto* const ts {m_ctx.create_tensor(
             m_dtype,
-            get_active_dims()
+            used_dims()
         )};
         std::memcpy(ts->m_x.u8, m_x.u8, m_datasize);
         ts->format_name("{} (clone)", m_name.data());
@@ -154,7 +153,7 @@ namespace rtml {
 
     auto tensor::splat(const float x) const -> void {
         switch (m_dtype) {
-            case dtype::f32: std::ranges::fill(m_x.f32, m_x.f32+m_datasize/get_data_type_traits().size, x); break;
+            case dtype::f32: std::ranges::fill(m_x.f32, m_x.f32+m_datasize/datatype_traits().size, x); break;
             case dtype::$count: std::abort();
         }
     }
@@ -188,7 +187,7 @@ namespace rtml {
         fmt += fmt::format(
             "Tensor '{}', {} * {}D, Shape [{} X {} X {} X {}], Strides [{} X {} X {} X {}] {:.01f}{}",
             m_name.data(),
-            get_data_type_traits().name,
+            datatype_traits().name,
             m_num_dims,
             m_shape[0],
             m_shape[1],

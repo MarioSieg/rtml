@@ -84,18 +84,14 @@ namespace rtml {
             tensor::dtype type,
             std::span<const std::int64_t> dims,
             tensor* slice = nullptr,
-            std::size_t slice_offset = 0,
-            tensor::id* out_id = nullptr
+            std::size_t slice_offset = 0
         ) -> tensor*;
         [[nodiscard]] auto create_tensor(
             tensor::dtype type,
             std::initializer_list<const std::int64_t> dims,
             tensor* slice = nullptr,
-            std::size_t slice_offset = 0,
-            tensor::id* out_id = nullptr
+            std::size_t slice_offset = 0
         ) -> tensor*;
-        [[nodiscard]] auto get_tensor(tensor::id id) const -> tensor*;
-        [[nodiscard]] auto get_all_tensors() noexcept -> std::span<tensor*> { return m_tensors; }
 
         isolate(const isolate&) = delete;
         isolate(isolate&&) = delete;
@@ -116,7 +112,6 @@ namespace rtml {
         const std::string m_name;
         const compute_device m_device;
         class pool m_pool;
-        std::vector<tensor*> m_tensors {}; // All tensors in this context. Memory us owned by m_pool.
 
     protected:
         isolate(std::string&& name, compute_device device, std::size_t pool_mem);

@@ -76,16 +76,16 @@ namespace rtml::blas {
     }
 
     auto t_f32_add(tensor& r, const tensor& x, const tensor& y) noexcept -> void {
-        std::uint8_t* const pr {r.get_data()};
-        const std::uint8_t* const px {x.get_data()};
-        const std::uint8_t* const py {y.get_data()};
+        std::uint8_t* const pr {r.data()};
+        const std::uint8_t* const px {x.data()};
+        const std::uint8_t* const py {y.data()};
         const dim num_rows {r.row_count()};
-        const auto [x_d0, x_d1, x_d2, x_d3] {x.get_dims()};
-        const auto [x_s0, x_s1, x_s2, x_s3] {x.get_strides()};
-        const auto [y_d0, y_d1, y_d2, y_d3] {y.get_dims()};
-        const auto [y_s0, y_s1, y_s2, y_s3] {y.get_strides()};
-        const auto [r_d0, r_d1, r_d2, r_d3] {r.get_dims()};
-        const auto [r_s0, r_s1, r_s2, r_s3] {r.get_strides()};
+        const auto [x_d0, x_d1, x_d2, x_d3] {x.dims()};
+        const auto [x_s0, x_s1, x_s2, x_s3] {x.strides()};
+        const auto [y_d0, y_d1, y_d2, y_d3] {y.dims()};
+        const auto [y_s0, y_s1, y_s2, y_s3] {y.strides()};
+        const auto [r_d0, r_d1, r_d2, r_d3] {r.dims()};
+        const auto [r_s0, r_s1, r_s2, r_s3] {r.strides()};
         if (y_s0 == sizeof(float)) { /* Tensor x has a contigous memory layout */
             for (dim row_i {}; row_i < num_rows; ++row_i) {
                 const dim x_i3 {row_i / (x_d2*x_d1)}; /* Unroll index into dimensions */
@@ -120,16 +120,16 @@ namespace rtml::blas {
     }
 
     auto t_f32_sub(tensor& r, const tensor& x, const tensor& y) noexcept -> void {
-        std::uint8_t* const pr {r.get_data()};
-        const std::uint8_t* const px {x.get_data()};
-        const std::uint8_t* const py {y.get_data()};
+        std::uint8_t* const pr {r.data()};
+        const std::uint8_t* const px {x.data()};
+        const std::uint8_t* const py {y.data()};
         const dim num_rows {r.row_count()};
-        const auto [x_d0, x_d1, x_d2, x_d3] {x.get_dims()};
-        const auto [x_s0, x_s1, x_s2, x_s3] {x.get_strides()};
-        const auto [y_d0, y_d1, y_d2, y_d3] {y.get_dims()};
-        const auto [y_s0, y_s1, y_s2, y_s3] {y.get_strides()};
-        const auto [r_d0, r_d1, r_d2, r_d3] {r.get_dims()};
-        const auto [r_s0, r_s1, r_s2, r_s3] {r.get_strides()};
+        const auto [x_d0, x_d1, x_d2, x_d3] {x.dims()};
+        const auto [x_s0, x_s1, x_s2, x_s3] {x.strides()};
+        const auto [y_d0, y_d1, y_d2, y_d3] {y.dims()};
+        const auto [y_s0, y_s1, y_s2, y_s3] {y.strides()};
+        const auto [r_d0, r_d1, r_d2, r_d3] {r.dims()};
+        const auto [r_s0, r_s1, r_s2, r_s3] {r.strides()};
         if (y_s0 == sizeof(float)) { /* Tensor x has a contigous memory layout */
             for (dim row_i {}; row_i < num_rows; ++row_i) {
                 const dim x_i3 {row_i / (x_d2*x_d1)}; /* Unroll index into dimensions */
@@ -164,16 +164,16 @@ namespace rtml::blas {
     }
 
     auto t_f32_mul(tensor& r, const tensor& x, const tensor& y) noexcept -> void {
-        std::uint8_t* const pr {r.get_data()};
-        const std::uint8_t* const px {x.get_data()};
-        const std::uint8_t* const py {y.get_data()};
+        std::uint8_t* const pr {r.data()};
+        const std::uint8_t* const px {x.data()};
+        const std::uint8_t* const py {y.data()};
         const dim num_rows {r.row_count()};
-        const auto [x_d0, x_d1, x_d2, x_d3] {x.get_dims()};
-        const auto [x_s0, x_s1, x_s2, x_s3] {x.get_strides()};
-        const auto [y_d0, y_d1, y_d2, y_d3] {y.get_dims()};
-        const auto [y_s0, y_s1, y_s2, y_s3] {y.get_strides()};
-        const auto [r_d0, r_d1, r_d2, r_d3] {r.get_dims()};
-        const auto [r_s0, r_s1, r_s2, r_s3] {r.get_strides()};
+        const auto [x_d0, x_d1, x_d2, x_d3] {x.dims()};
+        const auto [x_s0, x_s1, x_s2, x_s3] {x.strides()};
+        const auto [y_d0, y_d1, y_d2, y_d3] {y.dims()};
+        const auto [y_s0, y_s1, y_s2, y_s3] {y.strides()};
+        const auto [r_d0, r_d1, r_d2, r_d3] {r.dims()};
+        const auto [r_s0, r_s1, r_s2, r_s3] {r.strides()};
         if (y_s0 == sizeof(float)) { /* Tensor x has a contigous memory layout */
             for (dim row_i {}; row_i < num_rows; ++row_i) {
                 const dim x_i3 {row_i / (x_d2*x_d1)}; /* Unroll index into dimensions */
@@ -208,16 +208,16 @@ namespace rtml::blas {
     }
 
     auto t_f32_div(tensor& r, const tensor& x, const tensor& y) noexcept -> void {
-        std::uint8_t* const pr {r.get_data()};
-        const std::uint8_t* const px {x.get_data()};
-        const std::uint8_t* const py {y.get_data()};
+        std::uint8_t* const pr {r.data()};
+        const std::uint8_t* const px {x.data()};
+        const std::uint8_t* const py {y.data()};
         const dim num_rows {r.row_count()};
-        const auto [x_d0, x_d1, x_d2, x_d3] {x.get_dims()};
-        const auto [x_s0, x_s1, x_s2, x_s3] {x.get_strides()};
-        const auto [y_d0, y_d1, y_d2, y_d3] {y.get_dims()};
-        const auto [y_s0, y_s1, y_s2, y_s3] {y.get_strides()};
-        const auto [r_d0, r_d1, r_d2, r_d3] {r.get_dims()};
-        const auto [r_s0, r_s1, r_s2, r_s3] {r.get_strides()};
+        const auto [x_d0, x_d1, x_d2, x_d3] {x.dims()};
+        const auto [x_s0, x_s1, x_s2, x_s3] {x.strides()};
+        const auto [y_d0, y_d1, y_d2, y_d3] {y.dims()};
+        const auto [y_s0, y_s1, y_s2, y_s3] {y.strides()};
+        const auto [r_d0, r_d1, r_d2, r_d3] {r.dims()};
+        const auto [r_s0, r_s1, r_s2, r_s3] {r.strides()};
         if (y_s0 == sizeof(float)) { /* Tensor x has a contigous memory layout */
             for (dim row_i {}; row_i < num_rows; ++row_i) {
                 const dim x_i3 {row_i / (x_d2*x_d1)}; /* Unroll index into dimensions */
@@ -252,62 +252,62 @@ namespace rtml::blas {
     }
 
     auto t_f32_matmul(tensor& r, const tensor& x, const tensor& y) noexcept -> void {
-            std::uint8_t* const pr {r.get_data()};
-            const std::uint8_t* const px {x.get_data()};
-            const std::uint8_t* const py {y.get_data()};
-            const auto [x_d0, x_d1, x_d2, x_d3] {x.get_dims()};
-            const auto [x_s0, x_s1, x_s2, x_s3] {x.get_strides()};
-            const auto [y_d0, y_d1, y_d2, y_d3] {y.get_dims()};
-            const auto [y_s0, y_s1, y_s2, y_s3] {y.get_strides()};
-            const auto [r_d0, r_d1, r_d2, r_d3] {r.get_dims()};
-            const auto [r_s0, r_s1, r_s2, r_s3] {r.get_strides()};
+        std::uint8_t* const pr {r.data()};
+        const std::uint8_t* const px {x.data()};
+        const std::uint8_t* const py {y.data()};
+        const auto [x_d0, x_d1, x_d2, x_d3] {x.dims()};
+        const auto [x_s0, x_s1, x_s2, x_s3] {x.strides()};
+        const auto [y_d0, y_d1, y_d2, y_d3] {y.dims()};
+        const auto [y_s0, y_s1, y_s2, y_s3] {y.strides()};
+        const auto [r_d0, r_d1, r_d2, r_d3] {r.dims()};
+        const auto [r_s0, r_s1, r_s2, r_s3] {r.strides()};
 
-            const dim r2 {y_d2/x_d2};
-            const dim r3 {y_d3/x_d3};
-            const dim row_size {y_d0*static_cast<dim>(sizeof(float))};
-            const dim nr0 {x_d1}; // x rows
-            const dim nr1 {y_d1*y_d2*y_d3}; // y rows
-            const dim dr0 {nr0};
-            const dim dr1 {nr1};
-            const dim ir010 {0};
-            const dim ir011 {std::min(ir010+dr0, nr0)};
-            const dim ir110 {0};
-            const dim ir111 {std::min(ir110+dr1, nr1)};
+        const dim r2 {y_d2/x_d2};
+        const dim r3 {y_d3/x_d3};
+        const dim row_size {y_d0*static_cast<dim>(sizeof(float))};
+        const dim nr0 {x_d1}; // x rows
+        const dim nr1 {y_d1*y_d2*y_d3}; // y rows
+        const dim dr0 {nr0};
+        const dim dr1 {nr1};
+        const dim ir010 {0};
+        const dim ir011 {std::min(ir010+dr0, nr0)};
+        const dim ir110 {0};
+        const dim ir111 {std::min(ir110+dr1, nr1)};
 
-            // block tiling
-            static constexpr dim block_x {16};
-            static constexpr dim block_y {16};
-            for (dim iir1 {ir110}; iir1 < ir111; iir1 += block_y) { // outer kernel
-                for (dim iir0 {ir010}; iir0 < ir011; iir0 += block_x) { // inner kernel
-                    for (dim ir1 {iir1}; ir1 < iir1 + block_y; ++ir1) { // block row kernel
-                        if (ir1 >= ir111) break;
-                        const dim i13 {ir1 / (y_d2*y_d1)}; // Unroll index into dimensions
-                        const dim i12 {(ir1 - i13*y_d2*y_d1) / y_d1};
-                        const dim i11 {ir1 - i13*y_d2*y_d1 - i12*y_d1};
-                        const dim i03 {i13/r3}; // Broadcast x -> y
-                        const dim i02 {i12/r2}; // Broadcast x -> y
-                        const dim i1 {i11};
-                        const dim i2 {i12};
-                        const dim i3 {i13};
-                        const std::uint8_t* const x_row {
-                            px + (i02*x_s2 + i03*x_s3)
-                        };
-                        const std::uint8_t* const y_col {
-                            py + row_size*(i11 + i12*y_d1 + i13*y_d2*y_d1)
-                        };
-                        auto* const r_col {
-                            reinterpret_cast<float*>(pr + (i1*r_s1 + i2*r_s2 + i3*r_s3))
-                        };
-                        for (dim ir0 {iir0}; ir0 < iir0 + block_x && ir0 < ir011; ++ir0) { // blas kernel
-                            v_f32_dot(
-                                x_d0,
-                                r_col+ir0,
-                                reinterpret_cast<const float*>(x_row + ir0*x_s1),
-                                reinterpret_cast<const float*>(y_col)
-                            );
-                        }
+        // block tiling
+        static constexpr dim block_x {16};
+        static constexpr dim block_y {16};
+        for (dim iir1 {ir110}; iir1 < ir111; iir1 += block_y) { // outer kernel
+            for (dim iir0 {ir010}; iir0 < ir011; iir0 += block_x) { // inner kernel
+                for (dim ir1 {iir1}; ir1 < iir1 + block_y; ++ir1) { // block row kernel
+                    if (ir1 >= ir111) break;
+                    const dim i13 {ir1 / (y_d2*y_d1)}; // Unroll index into dimensions
+                    const dim i12 {(ir1 - i13*y_d2*y_d1) / y_d1};
+                    const dim i11 {ir1 - i13*y_d2*y_d1 - i12*y_d1};
+                    const dim i03 {i13/r3}; // Broadcast x -> y
+                    const dim i02 {i12/r2}; // Broadcast x -> y
+                    const dim i1 {i11};
+                    const dim i2 {i12};
+                    const dim i3 {i13};
+                    const std::uint8_t* const x_row {
+                        px + (i02*x_s2 + i03*x_s3)
+                    };
+                    const std::uint8_t* const y_col {
+                        py + row_size*(i11 + i12*y_d1 + i13*y_d2*y_d1)
+                    };
+                    auto* const r_col {
+                        reinterpret_cast<float*>(pr + (i1*r_s1 + i2*r_s2 + i3*r_s3))
+                    };
+                    for (dim ir0 {iir0}; ir0 < iir0 + block_x && ir0 < ir011; ++ir0) { // blas kernel
+                        v_f32_dot(
+                            x_d0,
+                            r_col+ir0,
+                            reinterpret_cast<const float*>(x_row + ir0*x_s1),
+                            reinterpret_cast<const float*>(y_col)
+                        );
                     }
                 }
             }
+        }
     }
 }

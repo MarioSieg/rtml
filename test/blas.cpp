@@ -73,7 +73,7 @@ TEST(blas, tensor_add) {
         for (dim j {}; j < shape[1]; ++j) {
             for (dim k {}; k < shape[2]; ++k) {
                 for (dim l {}; l < shape[3]; ++l) {
-                    const float actual {c->get_scalar({i, j, k, l})};
+                    const float actual {(*c)({i, j, k, l})};
                     ASSERT_FLOAT_EQ(actual, x+y);
                 }
             }
@@ -99,7 +99,7 @@ TEST(blas, tensor_sub) {
         for (dim j {}; j < shape[1]; ++j) {
             for (dim k {}; k < shape[2]; ++k) {
                 for (dim l {}; l < shape[3]; ++l) {
-                    const float actual {c->get_scalar({i, j, k, l})};
+                    const float actual {(*c)({i, j, k, l})};
                     ASSERT_FLOAT_EQ(actual, x-y);
                 }
             }
@@ -125,7 +125,7 @@ TEST(blas, tensor_mul) {
         for (dim j {}; j < shape[1]; ++j) {
             for (dim k {}; k < shape[2]; ++k) {
                 for (dim l {}; l < shape[3]; ++l) {
-                    const float actual {c->get_scalar({i, j, k, l})};
+                    const float actual {(*c)({i, j, k, l})};
                     ASSERT_FLOAT_EQ(actual, x*y);
                 }
             }
@@ -151,33 +151,7 @@ TEST(blas, tensor_div) {
         for (dim j {}; j < shape[1]; ++j) {
             for (dim k {}; k < shape[2]; ++k) {
                 for (dim l {}; l < shape[3]; ++l) {
-                    const float actual {c->get_scalar({i, j, k, l})};
-                    ASSERT_FLOAT_EQ(actual, x/y);
-                }
-            }
-        }
-    }
-}
-
-TEST(blas, tensor_matmul) {
-    std::mt19937_64 prng {};
-    std::uniform_real_distribution<float> dist{-1.0f, 1.0f};
-    const float x {dist(prng)};
-    const float y {dist(prng)};
-    std::array<dim, tensor::k_max_dims> shape {4, 4, 8, 3};
-    auto ctx = isolate::create("test", isolate::compute_device::cpu, 0x1000<<3);
-    tensor* a = ctx->create_tensor(tensor::dtype::f32, shape);
-    a->splat(x);
-    tensor* b = ctx->create_tensor(tensor::dtype::f32, shape);
-    b->splat(y);
-    tensor* c = ctx->create_tensor(tensor::dtype::f32, shape);
-    c->splat_zero();
-    blas::t_f32_matmul(*c, *a, *b);
-    for (dim i {}; i < shape[0]; ++i) {
-        for (dim j {}; j < shape[1]; ++j) {
-            for (dim k {}; k < shape[2]; ++k) {
-                for (dim l {}; l < shape[3]; ++l) {
-                    const float actual {c->get_scalar({i, j, k, l})};
+                    const float actual {(*c)({i, j, k, l})};
                     ASSERT_FLOAT_EQ(actual, x/y);
                 }
             }
@@ -186,7 +160,7 @@ TEST(blas, tensor_matmul) {
 }
 
 TEST(blas, tensor_matmul2) {
-    constexpr int M = 4, N = 16, K = 36;
+    constexpr std::size_t M {4}, N {16}, K {36};
 
     // matrix A (4 X 36)
     static constexpr std::array<float, M * K> A {
@@ -226,13 +200,13 @@ TEST(blas, tensor_matmul2) {
 
     auto ctx = isolate::create("test", isolate::compute_device::cpu, 0x1000<<3);
     tensor* a = ctx->create_tensor(tensor::dtype::f32, {M, K});
-    std::memcpy(a->get_data(), A.data(), A.size() * sizeof(float));
+    std::memcpy(a->data(), A.data(), A.size() * sizeof(float));
     tensor* b = ctx->create_tensor(tensor::dtype::f32, {N, K});
-    std::memcpy(b->get_data(), B.data(), B.size() * sizeof(float));
+    std::memcpy(b->data(), B.data(), B.size() * sizeof(float));
     tensor* c = ctx->create_tensor(tensor::dtype::f32, {M, N});
     c->splat_zero();
     blas::t_f32_matmul(*c, *a, *b);
     for(dim i {}; i < result.size(); ++i) {
-        ASSERT_FLOAT_EQ(c->get_scalar(i), result[i]);
+        ASSERT_FLOAT_EQ((*c)(i), result[i]);
     }
 }

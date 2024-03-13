@@ -64,14 +64,9 @@ namespace rtml {
         const tensor::dtype type,
         const std::span<const std::int64_t> dims,
         tensor* const slice,
-        const std::size_t slice_offset,
-        tensor::id* const out_id
+        const std::size_t slice_offset
     ) -> tensor* {
-        assert(m_tensors.size() <= std::numeric_limits<tensor::id>::max());
-        const auto id {static_cast<tensor::id>(m_tensors.size())};
-        auto* tensor = m_pool.alloc<class tensor>(*this, static_cast<tensor::id>(id), type, dims, slice, slice_offset);
-        m_tensors.emplace_back(tensor);
-        if (out_id) *out_id = id;
+        auto* tensor = m_pool.alloc<class tensor>(*this, type, dims, slice, slice_offset);
         return tensor;
     }
 
@@ -79,16 +74,9 @@ namespace rtml {
         const tensor::dtype type,
         const std::initializer_list<const std::int64_t> dims,
         tensor* const slice,
-        const std::size_t slice_offset,
-        tensor::id* const out_id
+        const std::size_t slice_offset
     ) -> tensor* {
-        return create_tensor(type, std::span{dims.begin(), dims.size()}, slice, slice_offset, out_id);
-    }
-
-    auto isolate::get_tensor(const tensor::id id) const -> tensor* {
-        if (id >= m_tensors.size()) [[unlikely]]
-            return nullptr;
-        return &*m_tensors[id];
+        return create_tensor(type, std::span{dims.begin(), dims.size()}, slice, slice_offset);
     }
 
     auto isolate::init_rtml_runtime() -> bool {

@@ -11,7 +11,7 @@ namespace rtml::graph {
         if (!r) [[unlikely]] {
             return false;
         }
-        if (const auto num {static_cast<std::size_t>(r->get_op())}; k_operands[num] != src.size() && src.size() == 1) [[unlikely]] {
+        if (const auto num {static_cast<std::size_t>(r->opcode())}; k_operands[num] != src.size() && src.size() == 1) [[unlikely]] {
             rtml_log_error("Operand count mismatch, expected {}, got {}", num, src.size());
             return false;
         }
@@ -19,10 +19,10 @@ namespace rtml::graph {
         if (!x) [[unlikely]] {
             return false;
         }
-        if (!x->is_contiguous_except_dim1()) [[unlikely]] {
+        if (!x->is_dense_except_dim1()) [[unlikely]] {
             return false;
         }
-        if (!r->is_contiguous_except_dim1()) [[unlikely]] {
+        if (!r->is_dense_except_dim1()) [[unlikely]] {
             return false;
         }
         if (r->is_shape_eq(x)) [[unlikely]] {
@@ -36,7 +36,7 @@ namespace rtml::graph {
         if (!r) [[unlikely]] {
             return false;
         }
-        if (const auto num {static_cast<std::size_t>(r->get_op())}; k_operands[num] != src.size() && src.size() == 2) [[unlikely]] {
+        if (const auto num {static_cast<std::size_t>(r->opcode())}; k_operands[num] != src.size() && src.size() == 2) [[unlikely]] {
             rtml_log_error("Operand count mismatch, expected {}, got {}", num, src.size());
             return false;
         }
@@ -45,10 +45,10 @@ namespace rtml::graph {
         if (!x || !y) [[unlikely]] {
             return false;
         }
-        if (x->get_strides()[0] != sizeof(float)) [[unlikely]] {
+        if (x->strides()[0] != sizeof(float)) [[unlikely]] {
             return false;
         }
-        if (r->get_strides()[0] != sizeof(float)) [[unlikely]] {
+        if (r->strides()[0] != sizeof(float)) [[unlikely]] {
             return false;
         }
         if (!y->can_repeat(x)) [[unlikely]] {
@@ -92,8 +92,8 @@ namespace rtml::graph {
         for (dim row {}; row < num_rows; ++row) { \
             blas::blas_func( \
                 num_cols, \
-                reinterpret_cast<float*>(r->get_data() + row * r->get_strides()[1]), \
-                reinterpret_cast<const float*>(x->get_data() + row * x->get_strides()[1]) \
+                reinterpret_cast<float*>(r->data() + row * r->strides()[1]), \
+                reinterpret_cast<const float*>(x->data() + row * x->strides()[1]) \
             ); \
         }
 
@@ -143,7 +143,7 @@ namespace rtml::graph {
         const graph_eval_order order,
         const std::function<auto(const tensor* t) -> void>& callback
     ) -> void {
-        const auto& operands {root->get_operands()};
+        const auto& operands {root->operands()};
         for (std::size_t i {}; i < operands.size(); ++i) {
             const std::size_t ii {
                 order == graph_eval_order::left_to_right
