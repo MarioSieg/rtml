@@ -4,6 +4,8 @@
 #include <cmath>
 
 #include "blas.hpp"
+#include "isolate.hpp"
+#include "tensor.hpp"
 
 namespace rtml::blas {
     static constexpr float k_rtml_sqrt2pi {0.79788456080286535587989211986876f};
@@ -75,7 +77,7 @@ namespace rtml::blas {
         *os = static_cast<float>(sum);
     }
 
-    auto t_f32_add(tensor& r, const tensor& x, const tensor& y) noexcept -> void {
+    auto t_f32_add(tensor<float>& r, const tensor<float>& x, const tensor<float>& y) noexcept -> void {
         std::uint8_t* const pr {r.ptr()};
         const std::uint8_t* const px {x.ptr()};
         const std::uint8_t* const py {y.ptr()};
@@ -119,7 +121,7 @@ namespace rtml::blas {
         }
     }
 
-    auto t_f32_sub(tensor& r, const tensor& x, const tensor& y) noexcept -> void {
+    auto t_f32_sub(tensor<float>& r, const tensor<float>& x, const tensor<float>& y) noexcept -> void {
         std::uint8_t* const pr {r.ptr()};
         const std::uint8_t* const px {x.ptr()};
         const std::uint8_t* const py {y.ptr()};
@@ -163,7 +165,7 @@ namespace rtml::blas {
         }
     }
 
-    auto t_f32_mul(tensor& r, const tensor& x, const tensor& y) noexcept -> void {
+    auto t_f32_mul(tensor<float>& r, const tensor<float>& x, const tensor<float>& y) noexcept -> void {
         std::uint8_t* const pr {r.ptr()};
         const std::uint8_t* const px {x.ptr()};
         const std::uint8_t* const py {y.ptr()};
@@ -207,7 +209,7 @@ namespace rtml::blas {
         }
     }
 
-    auto t_f32_div(tensor& r, const tensor& x, const tensor& y) noexcept -> void {
+    auto t_f32_div(tensor<float>& r, const tensor<float>& x, const tensor<float>& y) noexcept -> void {
         std::uint8_t* const pr {r.ptr()};
         const std::uint8_t* const px {x.ptr()};
         const std::uint8_t* const py {y.ptr()};
@@ -251,7 +253,7 @@ namespace rtml::blas {
         }
     }
 
-    auto t_f32_matmul(tensor& r, const tensor& x, const tensor& y) noexcept -> void {
+    auto t_f32_matmul(tensor<float>& r, const tensor<float>& x, const tensor<float>& y) noexcept -> void {
         std::uint8_t* const pr {r.ptr()};
         const std::uint8_t* const px {x.ptr()};
         const std::uint8_t* const py {y.ptr()};

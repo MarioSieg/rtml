@@ -2,13 +2,15 @@
 
 #pragma once
 
+#if 0
+
 #include <array>
 #include <cstdint>
 #include <string_view>
 #include <span>
 
 namespace rtml {
-    class tensor;
+    template <typename T>
 }
 
 namespace rtml::graph {
@@ -64,3 +66,5 @@ namespace rtml::graph {
         const std::function<auto (const tensor* t) -> void>& callback
     ) -> void;
 }
+
+#endif

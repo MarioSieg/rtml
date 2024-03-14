@@ -2,6 +2,10 @@
 
 #pragma once
 
+#include <span>
+
+#include "tensor_base.hpp"
+
 #define RTML_LOG_ENABLE true
 
 #if RTML_LOG_ENABLE
@@ -14,8 +18,6 @@
 #define rtml_log_warn(...)
 #define rtml_log_error(...)
 #endif
-
-#include "tensor.hpp"
 
 namespace rtml {
     template <typename T>
@@ -81,19 +83,23 @@ namespace rtml {
             std::size_t pool_mem
         ) -> std::shared_ptr<isolate>;
 
+        template <typename T> requires is_dtype<T>
         [[nodiscard]] auto new_tensor(
-            tensor::dtype type,
             std::initializer_list<const std::int64_t> dims,
-            tensor* slice = nullptr,
+            tensor<T>* slice = nullptr,
             std::size_t slice_offset = 0
-        ) -> tensor*;
+        ) -> tensor<T>* {
+            return m_pool.alloc<tensor<T>>(*this, dims, slice, slice_offset);
+        }
 
+        template <typename T> requires is_dtype<T>
         [[nodiscard]] auto new_tensor(
-            tensor::dtype type,
             std::span<const std::int64_t> dims,
-            tensor* slice = nullptr,
+            tensor<T>* slice = nullptr,
             std::size_t slice_offset = 0
-        ) -> tensor*;
+        ) -> tensor<T>* {
+            return m_pool.alloc<tensor<T>>(*this, dims, slice, slice_offset);
+        }
 
         isolate(const isolate&) = delete;
         isolate(isolate&&) = delete;

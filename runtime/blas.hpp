@@ -1,11 +1,8 @@
 // Copyright Mario "Neo" Sieg 2024. All rights reserved. mario.sieg.64@gmail.com
 
 #pragma once
-#include "tensor.hpp"
 
-namespace rtml {
-    class tensor;
-}
+#include "tensor_base.hpp"
 
 namespace rtml::blas {
     // v = vector
@@ -24,9 +21,9 @@ namespace rtml::blas {
     extern auto v_f32_div(std::size_t n, float* ov, const float* x, const float* y) noexcept -> void;
     extern auto v_f32_dot(std::size_t n, float* os, const float* x, const float* y) noexcept -> void;
 
-    extern auto t_f32_add(tensor& r, const tensor& x, const tensor& y) noexcept -> void;
-    extern auto t_f32_sub(tensor& r, const tensor& x, const tensor& y) noexcept -> void;
-    extern auto t_f32_mul(tensor& r, const tensor& x, const tensor& y) noexcept -> void;
-    extern auto t_f32_div(tensor& r, const tensor& x, const tensor& y) noexcept -> void;
-    extern auto t_f32_matmul(tensor& r, const tensor& x, const tensor& y) noexcept -> void;
+    extern auto t_f32_add(tensor<float>& r, const tensor<float>& x, const tensor<float>& y) noexcept -> void;
+    extern auto t_f32_sub(tensor<float>& r, const tensor<float>& x, const tensor<float>& y) noexcept -> void;
+    extern auto t_f32_mul(tensor<float>& r, const tensor<float>& x, const tensor<float>& y) noexcept -> void;
+    extern auto t_f32_div(tensor<float>& r, const tensor<float>& x, const tensor<float>& y) noexcept -> void;
+    extern auto t_f32_matmul(tensor<float>& r, const tensor<float>& x, const tensor<float>& y) noexcept -> void;
 }

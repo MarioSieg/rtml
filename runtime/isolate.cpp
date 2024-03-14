@@ -60,26 +60,6 @@ namespace rtml {
         return std::make_shared<context_proxy>(std::move(name), device, pool_mem);
     }
 
-    auto isolate::new_tensor(
-        const tensor::dtype type,
-        const std::initializer_list<const std::int64_t> dims,
-        tensor* const slice,
-        const std::size_t slice_offset
-    ) -> tensor* {
-        auto* tensor = m_pool.alloc<class tensor>(*this, type, dims, slice, slice_offset);
-        return tensor;
-    }
-
-    auto isolate::new_tensor(
-        const tensor::dtype type,
-        const std::span<const std::int64_t> dims,
-        tensor* const slice,
-        const std::size_t slice_offset
-    ) -> tensor* {
-        auto* tensor = m_pool.alloc<class tensor>(*this, type, dims, slice, slice_offset);
-        return tensor;
-    }
-
     auto isolate::init_rtml_runtime() -> bool {
         if (s_runtime_initialized.load(std::memory_order::seq_cst)) {
             rtml_log_warn("RTML runtime already initialized");
