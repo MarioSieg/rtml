@@ -33,17 +33,31 @@ namespace rtml {
     }
 
     auto tensor::is_shape_eq(const tensor* const other) const noexcept -> bool {
-        if (this == other)
+        if (this == other) [[unlikely]]
             return true;
-        if (m_num_dims == other->m_num_dims)
+        if (m_num_dims == other->m_num_dims) [[likely]]
             return std::equal(m_shape.cbegin(), m_shape.cbegin()+m_num_dims, other->m_shape.cbegin());
         return false;
     }
 
     auto tensor::is_matmul_compatible(const tensor* const other) const noexcept -> bool {
+        static_assert(k_max_dims == 4);
         return m_shape[0] == other->m_shape[0] && // Check if matrix multiplication is compatible
             other->m_shape[2] % m_shape[2] == 0 &&
             other->m_shape[3] % m_shape[3] == 0;
+    }
+
+    auto tensor::is_transposed() const noexcept -> bool {
+        static_assert(k_max_dims == 4);
+        return m_strides[0] > m_strides[1];
+    }
+
+    auto tensor::is_permuted() const noexcept -> bool {
+        static_assert(k_max_dims == 4);
+        return
+            m_strides[0] > m_strides[1] ||
+            m_strides[1] > m_strides[2] ||
+            m_strides[2] > m_strides[3];
     }
 
     auto tensor::row_count() const noexcept -> dim {
@@ -106,16 +120,16 @@ namespace rtml {
             slice_offset += slice->m_slice_offset;
             slice = slice->m_slice;
         }
-        const dtype_trait& dtype_inf {k_stype_traits[static_cast<std::size_t>(type)]};
-        std::size_t datasize {dtype_inf.size}; // Tensor data size to allocate
-        for (const auto dim : dims) // Accumulate total size of tensor
-            datasize *= std::max<decltype(dim)>(1, dim);
+        const dtype_trait& dtype_traits {k_stype_traits[static_cast<std::size_t>(type)]};
+        std::size_t datasize {dtype_traits.size}; // Tensor data size to allocate
+        for (std::size_t i {1}; i < dims.size(); ++i) // Compute total data size
+            datasize *= std::max<std::decay_t<decltype(dims[i])>>(1, dims[i]);
         assert(!slice || datasize+slice_offset <= slice->m_datasize); // Check if slice has enough space
         static constexpr bool k_align_scalar = false; // Aligned data address to scalar alignment?
         m_x.u8 = slice
             ? slice->m_x.u8+slice_offset
             : static_cast<std::uint8_t*>(k_align_scalar
-                ? m_ctx.pool().alloc_raw(datasize, dtype_inf.align)
+                ? m_ctx.pool().alloc_raw(datasize, dtype_traits.align)
                 : m_ctx.pool().alloc_raw(datasize)); // Point into slice data (if slice) or allocate new data from pool.
         m_datasize = datasize;
         m_num_dims = dims.size();
@@ -123,13 +137,13 @@ namespace rtml {
         m_slice_offset = slice_offset;
         std::ranges::fill(m_shape.begin(), m_shape.end(), 1); // Splat identity dimensions
         std::ranges::copy(dims.begin(), dims.end(), m_shape.begin()); // Copy dimensions
-        m_strides[0] = static_cast<dim>(dtype_inf.size);
+        m_strides[0] = static_cast<dim>(dtype_traits.size);
         for (std::size_t i {1}; i < k_max_dims; ++i) // Compute strides
             m_strides[i] = m_strides[i-1]*m_shape[i-1];
     }
 
-    auto tensor::isomorphic() noexcept -> tensor* {
-        auto* const ts {m_ctx.create_tensor(
+    auto tensor::isomorphic_clone() noexcept -> tensor* {
+        auto* const ts {m_ctx.new_tensor(
             m_dtype,
             used_dims()
         )};
@@ -137,12 +151,27 @@ namespace rtml {
         return ts;
     }
 
+    auto tensor::sliced_clone() noexcept -> tensor* {
+        auto* const ts {m_ctx.new_tensor(
+            m_dtype,
+            used_dims(),
+            this,
+            0
+        )};
+        std::ranges::copy(m_strides.cbegin(), m_strides.cend(), ts->m_strides.begin());
+        ts->format_name("{} (slice)", m_name.data());
+        return ts;
+    }
+
     auto tensor::clone() noexcept -> tensor* {
-        auto* const ts {m_ctx.create_tensor(
+        auto* const ts {m_ctx.new_tensor(
             m_dtype,
             used_dims()
         )};
-        std::memcpy(ts->m_x.u8, m_x.u8, m_datasize);
+        switch (m_dtype) {
+            case dtype::f32: std::ranges::copy(data<float>(), ts->data<float>().begin()); break;
+            case dtype::$count: std::abort();
+        }
         ts->format_name("{} (clone)", m_name.data());
         return ts;
     }
@@ -156,10 +185,7 @@ namespace rtml {
     }
 
     auto tensor::splat(const float x) const -> void {
-        switch (m_dtype) {
-            case dtype::f32: std::ranges::fill(m_x.f32, m_x.f32+m_datasize/datatype_traits().size, x); break;
-            case dtype::$count: std::abort();
-        }
+        std::ranges::fill(data<float>(), x);
     }
 
     auto tensor::push_operand(const tensor* const x) -> void {

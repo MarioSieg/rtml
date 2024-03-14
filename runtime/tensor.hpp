@@ -18,8 +18,13 @@ namespace rtml {
 
     using dim = std::int64_t; // Dimension scalar used for dims, indices and strides.
 
+    template <typename T>
+    concept is_dtype = requires {
+        requires std::is_same_v<T, float>;
+    };
 
     // Represents an N-dimensional (1-k_max_dims) tensor, which is also a vertex in the computation DAG.
+    // The dimensionality and data type of a tensor are dynamically handled at runtime.
     class tensor final {
     public:
         static constexpr dim k_max_dims {4};
@@ -58,20 +63,25 @@ namespace rtml {
         [[nodiscard]] auto slice_offset() const noexcept -> std::size_t { return m_slice_offset; }
         [[nodiscard]] auto operands() noexcept -> fixed_vector<const tensor*, k_max_operands>& { return m_operands; }
         [[nodiscard]] auto operands() const noexcept -> const fixed_vector<const tensor*, k_max_operands>& { return m_operands; }
-        [[nodiscard]] auto data() const noexcept -> std::uint8_t* { return m_x.u8; }
+        [[nodiscard]] auto ptr() const noexcept -> std::uint8_t* { return m_x.u8; }
+        template <typename T = float> requires is_dtype<T>
+        [[nodiscard]] auto data() const noexcept -> std::span<T> { return {reinterpret_cast<T*>(m_x.u8), m_datasize / sizeof(T)}; }
         [[nodiscard]] auto name() const noexcept -> const char* { return m_name.data(); }
         [[nodiscard]] auto opcode() const noexcept -> graph::opcode { return m_op; }
         [[nodiscard]] auto is_dense() const noexcept -> bool;
         [[nodiscard]] auto is_dense_except_dim1() const noexcept -> bool;
-        [[nodiscard]] auto can_repeat(const tensor* other) const noexcept -> bool;
         [[nodiscard]] auto is_shape_eq(const tensor* other) const noexcept -> bool;
         [[nodiscard]] auto is_matmul_compatible(const tensor* other) const noexcept -> bool;
+        [[nodiscard]] auto is_transposed() const noexcept -> bool;
+        [[nodiscard]] auto is_permuted() const noexcept -> bool;
+        [[nodiscard]] auto can_repeat(const tensor* other) const noexcept -> bool;
         [[nodiscard]] auto row_count() const noexcept -> dim;
         [[nodiscard]] auto col_count() const noexcept -> dim;
         [[nodiscard]] auto elem_count() const noexcept -> dim;
         [[nodiscard]] auto unroll_index(dim i) const noexcept -> std::array<dim, k_max_dims>;
 
-        [[nodiscard]] auto isomorphic() noexcept -> tensor*;
+        [[nodiscard]] auto isomorphic_clone() noexcept -> tensor*;
+        [[nodiscard]] auto sliced_clone() noexcept -> tensor*;
         [[nodiscard]] auto clone() noexcept -> tensor*;
 
         auto splat_zero() const -> void;
@@ -91,15 +101,17 @@ namespace rtml {
         [[nodiscard]] auto to_string(std::size_t with_data_elems = 0) const -> std::string;
         auto print(std::size_t with_data_elems = 0) const -> void;
 
-        tensor( // Do NOT use this constructor directly, use isolate::create_tensor instead
-          isolate& ctx,
-          dtype type,
-          std::span<const dim> dims,
-          tensor* slice,
-          std::size_t slice_offset
+    private:
+        friend class pool;
+
+        tensor(
+             isolate& ctx,
+             dtype type,
+             std::span<const dim> dims,
+             tensor* slice,
+             std::size_t slice_offset
         ) noexcept;
 
-    private:
         isolate& m_ctx; // Associated isolate
         std::array<char, k_max_name> m_name {}; // Tensor name - cannot use std::string because we must be trivially destructable
         const dtype m_dtype; // Tensor scalar data type

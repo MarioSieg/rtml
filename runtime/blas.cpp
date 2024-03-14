@@ -76,9 +76,9 @@ namespace rtml::blas {
     }
 
     auto t_f32_add(tensor& r, const tensor& x, const tensor& y) noexcept -> void {
-        std::uint8_t* const pr {r.data()};
-        const std::uint8_t* const px {x.data()};
-        const std::uint8_t* const py {y.data()};
+        std::uint8_t* const pr {r.ptr()};
+        const std::uint8_t* const px {x.ptr()};
+        const std::uint8_t* const py {y.ptr()};
         const dim num_rows {r.row_count()};
         const auto [x_d0, x_d1, x_d2, x_d3] {x.dims()};
         const auto [x_s0, x_s1, x_s2, x_s3] {x.strides()};
@@ -120,9 +120,9 @@ namespace rtml::blas {
     }
 
     auto t_f32_sub(tensor& r, const tensor& x, const tensor& y) noexcept -> void {
-        std::uint8_t* const pr {r.data()};
-        const std::uint8_t* const px {x.data()};
-        const std::uint8_t* const py {y.data()};
+        std::uint8_t* const pr {r.ptr()};
+        const std::uint8_t* const px {x.ptr()};
+        const std::uint8_t* const py {y.ptr()};
         const dim num_rows {r.row_count()};
         const auto [x_d0, x_d1, x_d2, x_d3] {x.dims()};
         const auto [x_s0, x_s1, x_s2, x_s3] {x.strides()};
@@ -164,9 +164,9 @@ namespace rtml::blas {
     }
 
     auto t_f32_mul(tensor& r, const tensor& x, const tensor& y) noexcept -> void {
-        std::uint8_t* const pr {r.data()};
-        const std::uint8_t* const px {x.data()};
-        const std::uint8_t* const py {y.data()};
+        std::uint8_t* const pr {r.ptr()};
+        const std::uint8_t* const px {x.ptr()};
+        const std::uint8_t* const py {y.ptr()};
         const dim num_rows {r.row_count()};
         const auto [x_d0, x_d1, x_d2, x_d3] {x.dims()};
         const auto [x_s0, x_s1, x_s2, x_s3] {x.strides()};
@@ -208,9 +208,9 @@ namespace rtml::blas {
     }
 
     auto t_f32_div(tensor& r, const tensor& x, const tensor& y) noexcept -> void {
-        std::uint8_t* const pr {r.data()};
-        const std::uint8_t* const px {x.data()};
-        const std::uint8_t* const py {y.data()};
+        std::uint8_t* const pr {r.ptr()};
+        const std::uint8_t* const px {x.ptr()};
+        const std::uint8_t* const py {y.ptr()};
         const dim num_rows {r.row_count()};
         const auto [x_d0, x_d1, x_d2, x_d3] {x.dims()};
         const auto [x_s0, x_s1, x_s2, x_s3] {x.strides()};
@@ -252,9 +252,9 @@ namespace rtml::blas {
     }
 
     auto t_f32_matmul(tensor& r, const tensor& x, const tensor& y) noexcept -> void {
-        std::uint8_t* const pr {r.data()};
-        const std::uint8_t* const px {x.data()};
-        const std::uint8_t* const py {y.data()};
+        std::uint8_t* const pr {r.ptr()};
+        const std::uint8_t* const px {x.ptr()};
+        const std::uint8_t* const py {y.ptr()};
         const auto [x_d0, x_d1, x_d2, x_d3] {x.dims()};
         const auto [x_s0, x_s1, x_s2, x_s3] {x.strides()};
         const auto [y_d0, y_d1, y_d2, y_d3] {y.dims()};

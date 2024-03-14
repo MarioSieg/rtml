@@ -8,7 +8,7 @@ using namespace rtml;
 
 TEST(tensor, create_1d) {
     auto ctx = isolate::create("test", isolate::compute_device::cpu, 0x1000);
-    tensor* tensor = ctx->create_tensor(tensor::dtype::f32, {25});
+    tensor* tensor = ctx->new_tensor(tensor::dtype::f32, {25});
     ASSERT_EQ(tensor->dim_count(), 1);
     ASSERT_EQ(tensor->size(), 25*sizeof(float));
     ASSERT_EQ(tensor->dims()[0], 25);
@@ -23,7 +23,7 @@ TEST(tensor, create_1d) {
 
 TEST(tensor, create_2d) {
     auto ctx = isolate::create("test", isolate::compute_device::cpu, 0x1000);
-    tensor* tensor = ctx->create_tensor(tensor::dtype::f32, {4, 4});
+    tensor* tensor = ctx->new_tensor(tensor::dtype::f32, {4, 4});
     ASSERT_EQ(tensor->dim_count(), 2);
     ASSERT_EQ(tensor->size(), 4*4*sizeof(float));
     ASSERT_EQ(tensor->dims()[0], 4);
@@ -38,7 +38,7 @@ TEST(tensor, create_2d) {
 
 TEST(tensor, create_3d) {
     auto ctx = isolate::create("test", isolate::compute_device::cpu, 0x1000);
-    tensor* tensor = ctx->create_tensor(tensor::dtype::f32, {4, 4, 8});
+    tensor* tensor = ctx->new_tensor(tensor::dtype::f32, {4, 4, 8});
     ASSERT_EQ(tensor->dim_count(), 3);
     ASSERT_EQ(tensor->size(), 4*4*8*sizeof(float));
     ASSERT_EQ(tensor->dims()[0], 4);
@@ -53,7 +53,7 @@ TEST(tensor, create_3d) {
 
 TEST(tensor, create_4d) {
     auto ctx = isolate::create("test", isolate::compute_device::cpu, 0x1000);
-    tensor* tensor = ctx->create_tensor(tensor::dtype::f32, {4, 4, 8, 3});
+    tensor* tensor = ctx->new_tensor(tensor::dtype::f32, {4, 4, 8, 3});
     ASSERT_EQ(tensor->dim_count(), 4);
     ASSERT_EQ(tensor->size(), 4*4*8*3*sizeof(float));
     ASSERT_EQ(tensor->dims()[0], 4);

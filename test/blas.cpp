@@ -62,11 +62,11 @@ TEST(blas, tensor_add) {
     const float y {dist(prng)};
     std::array<dim, tensor::k_max_dims> shape {4, 4, 8, 3};
     auto ctx = isolate::create("test", isolate::compute_device::cpu, 0x1000<<3);
-    tensor* a = ctx->create_tensor(tensor::dtype::f32, shape);
+    tensor* a = ctx->new_tensor(tensor::dtype::f32, shape);
     a->splat(x);
-    tensor* b = ctx->create_tensor(tensor::dtype::f32, shape);
+    tensor* b = ctx->new_tensor(tensor::dtype::f32, shape);
     b->splat(y);
-    tensor* c = ctx->create_tensor(tensor::dtype::f32, shape);
+    tensor* c = ctx->new_tensor(tensor::dtype::f32, shape);
     c->splat_zero();
     blas::t_f32_add(*c, *a, *b);
     for (dim i {}; i < shape[0]; ++i) {
@@ -88,11 +88,11 @@ TEST(blas, tensor_sub) {
     const float y {dist(prng)};
     std::array<dim, tensor::k_max_dims> shape {4, 4, 8, 3};
     auto ctx = isolate::create("test", isolate::compute_device::cpu, 0x1000<<3);
-    tensor* a = ctx->create_tensor(tensor::dtype::f32, shape);
+    tensor* a = ctx->new_tensor(tensor::dtype::f32, shape);
     a->splat(x);
-    tensor* b = ctx->create_tensor(tensor::dtype::f32, shape);
+    tensor* b = ctx->new_tensor(tensor::dtype::f32, shape);
     b->splat(y);
-    tensor* c = ctx->create_tensor(tensor::dtype::f32, shape);
+    tensor* c = ctx->new_tensor(tensor::dtype::f32, shape);
     c->splat_zero();
     blas::t_f32_sub(*c, *a, *b);
     for (dim i {}; i < shape[0]; ++i) {
@@ -114,11 +114,11 @@ TEST(blas, tensor_mul) {
     const float y {dist(prng)};
     std::array<dim, tensor::k_max_dims> shape {4, 4, 8, 3};
     auto ctx = isolate::create("test", isolate::compute_device::cpu, 0x1000<<3);
-    tensor* a = ctx->create_tensor(tensor::dtype::f32, shape);
+    tensor* a = ctx->new_tensor(tensor::dtype::f32, shape);
     a->splat(x);
-    tensor* b = ctx->create_tensor(tensor::dtype::f32, shape);
+    tensor* b = ctx->new_tensor(tensor::dtype::f32, shape);
     b->splat(y);
-    tensor* c = ctx->create_tensor(tensor::dtype::f32, shape);
+    tensor* c = ctx->new_tensor(tensor::dtype::f32, shape);
     c->splat_zero();
     blas::t_f32_mul(*c, *a, *b);
     for (dim i {}; i < shape[0]; ++i) {
@@ -140,11 +140,11 @@ TEST(blas, tensor_div) {
     const float y {dist(prng)};
     std::array<dim, tensor::k_max_dims> shape {4, 4, 8, 3};
     auto ctx = isolate::create("test", isolate::compute_device::cpu, 0x1000<<3);
-    tensor* a = ctx->create_tensor(tensor::dtype::f32, shape);
+    tensor* a = ctx->new_tensor(tensor::dtype::f32, shape);
     a->splat(x);
-    tensor* b = ctx->create_tensor(tensor::dtype::f32, shape);
+    tensor* b = ctx->new_tensor(tensor::dtype::f32, shape);
     b->splat(y);
-    tensor* c = ctx->create_tensor(tensor::dtype::f32, shape);
+    tensor* c = ctx->new_tensor(tensor::dtype::f32, shape);
     c->splat_zero();
     blas::t_f32_div(*c, *a, *b);
     for (dim i {}; i < shape[0]; ++i) {
@@ -199,11 +199,11 @@ TEST(blas, tensor_matmul2) {
     };
 
     auto ctx = isolate::create("test", isolate::compute_device::cpu, 0x1000<<3);
-    tensor* a = ctx->create_tensor(tensor::dtype::f32, {M, K});
-    std::memcpy(a->data(), A.data(), A.size() * sizeof(float));
-    tensor* b = ctx->create_tensor(tensor::dtype::f32, {N, K});
-    std::memcpy(b->data(), B.data(), B.size() * sizeof(float));
-    tensor* c = ctx->create_tensor(tensor::dtype::f32, {M, N});
+    tensor* a = ctx->new_tensor(tensor::dtype::f32, {M, K});
+    std::memcpy(a->ptr(), A.data(), A.size() * sizeof(float));
+    tensor* b = ctx->new_tensor(tensor::dtype::f32, {N, K});
+    std::memcpy(b->ptr(), B.data(), B.size() * sizeof(float));
+    tensor* c = ctx->new_tensor(tensor::dtype::f32, {M, N});
     c->splat_zero();
     blas::t_f32_matmul(*c, *a, *b);
     for(dim i {}; i < result.size(); ++i) {

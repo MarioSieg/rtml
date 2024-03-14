@@ -92,8 +92,8 @@ namespace rtml::graph {
         for (dim row {}; row < num_rows; ++row) { \
             blas::blas_func( \
                 num_cols, \
-                reinterpret_cast<float*>(r->data() + row * r->strides()[1]), \
-                reinterpret_cast<const float*>(x->data() + row * x->strides()[1]) \
+                reinterpret_cast<float*>(r->ptr() + row * r->strides()[1]), \
+                reinterpret_cast<const float*>(x->ptr() + row * x->strides()[1]) \
             ); \
         }
 

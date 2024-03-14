@@ -37,7 +37,7 @@ namespace rtml {
         [[nodiscard]] auto alloc_raw(std::size_t size) noexcept -> void*;
         [[nodiscard]] auto alloc_raw(std::size_t size, std::size_t align) noexcept -> void*;
         template <typename T, typename... Args>
-            requires is_pool_allocateable<T> && std::is_constructible_v<T, Args...>
+            requires is_pool_allocateable<T> //&& std::is_constructible_v<T, Args...>
         [[nodiscard]] auto alloc(Args&&... args) noexcept(std::is_nothrow_constructible_v<T, Args...>) -> T* {
             if constexpr (alignof(T) > k_natural_align || k_force_align) {
                 return new(static_cast<T*>(alloc_raw(sizeof(T), alignof(T)))) T{std::forward<Args>(args)...};
@@ -80,15 +80,17 @@ namespace rtml {
             compute_device device,
             std::size_t pool_mem
         ) -> std::shared_ptr<isolate>;
-        [[nodiscard]] auto create_tensor(
+
+        [[nodiscard]] auto new_tensor(
             tensor::dtype type,
-            std::span<const std::int64_t> dims,
+            std::initializer_list<const std::int64_t> dims,
             tensor* slice = nullptr,
             std::size_t slice_offset = 0
         ) -> tensor*;
-        [[nodiscard]] auto create_tensor(
+
+        [[nodiscard]] auto new_tensor(
             tensor::dtype type,
-            std::initializer_list<const std::int64_t> dims,
+            std::span<const std::int64_t> dims,
             tensor* slice = nullptr,
             std::size_t slice_offset = 0
         ) -> tensor*;
