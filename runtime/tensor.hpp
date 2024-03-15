@@ -34,6 +34,7 @@ namespace rtml {
     template <typename T = dtypes::f32> requires is_dtype<T>
     class tensor final {
     public:
+        using dtype = T;
         static constexpr dim k_max_dims {4};
         static constexpr std::size_t k_max_operands {2};
         static constexpr std::size_t k_max_name {128};

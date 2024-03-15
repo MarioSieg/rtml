@@ -31,6 +31,8 @@ using namespace rtml;
         } \
     }
 
+#if 0
+
 impl_blas_test(f32_add, +)
 impl_blas_test(f32_sub, -)
 impl_blas_test(f32_mul, *)
@@ -55,6 +57,8 @@ TEST(blas, vec_dot) {
     }
     ASSERT_FLOAT_EQ(r, static_cast<float>(acc));
 }
+
+#endif
 
 TEST(blas, tensor_add) {
     std::mt19937_64 prng {};

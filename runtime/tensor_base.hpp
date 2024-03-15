@@ -10,9 +10,11 @@ namespace rtml {
         using f32 = float;
     }
 
-    template <typename T>
+    template <typename S>
     concept is_dtype = requires {
-        requires std::is_same_v<T, dtypes::f32>;
+        !std::is_pointer_v<S>;
+        !std::is_reference_v<S>;
+        std::is_same_v<S, dtypes::f32>;
     };
 
     using dim = std::int64_t; // Dimension scalar used for dims, indices and strides.
