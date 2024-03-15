@@ -24,8 +24,7 @@ namespace rtml {
     template <typename T, typename... Args>
     [[nodiscard]] constexpr auto tuple_to_array(std::tuple<Args...>&& tup) -> std::array<T, sizeof...(Args)> {
         std::array<T, sizeof...(Args)> result {};
-        std::size_t i {};
-        std::apply([&result, &i](auto&&... v) {((result[i++] = v), ...);}, tup);
+        std::apply([&result, i=0](auto&&... v) mutable {((result[i++] = v), ...);}, tup);
         return result;
     }
 
