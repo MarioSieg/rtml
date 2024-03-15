@@ -73,7 +73,8 @@ TEST(blas, tensor_add) {
     b->splat(y);
     tensor<float>* c = ctx->new_tensor<float>(shape);
     c->splat_zero();
-    blas::t_f32_add(*c, *a, *b);
+    blas::compute_ctx cctx {};
+    blas::t_f32_add(cctx, *c, *a, *b);
     for (dim i {}; i < shape[0]; ++i) {
         for (dim j {}; j < shape[1]; ++j) {
             for (dim k {}; k < shape[2]; ++k) {
@@ -99,7 +100,8 @@ TEST(blas, tensor_sub) {
     b->splat(y);
     tensor<float>* c = ctx->new_tensor<float>(shape);
     c->splat_zero();
-    blas::t_f32_sub(*c, *a, *b);
+    blas::compute_ctx cctx {};
+    blas::t_f32_sub(cctx, *c, *a, *b);
     for (dim i {}; i < shape[0]; ++i) {
         for (dim j {}; j < shape[1]; ++j) {
             for (dim k {}; k < shape[2]; ++k) {
@@ -125,7 +127,8 @@ TEST(blas, tensor_mul) {
     b->splat(y);
     tensor<float>* c = ctx->new_tensor<float>(shape);
     c->splat_zero();
-    blas::t_f32_mul(*c, *a, *b);
+    blas::compute_ctx cctx {};
+    blas::t_f32_mul(cctx, *c, *a, *b);
     for (dim i {}; i < shape[0]; ++i) {
         for (dim j {}; j < shape[1]; ++j) {
             for (dim k {}; k < shape[2]; ++k) {
@@ -151,7 +154,8 @@ TEST(blas, tensor_div) {
     b->splat(y);
     tensor<float>* c = ctx->new_tensor<float>(shape);
     c->splat_zero();
-    blas::t_f32_div(*c, *a, *b);
+    blas::compute_ctx cctx {};
+    blas::t_f32_div(cctx, *c, *a, *b);
     for (dim i {}; i < shape[0]; ++i) {
         for (dim j {}; j < shape[1]; ++j) {
             for (dim k {}; k < shape[2]; ++k) {
@@ -210,7 +214,8 @@ TEST(blas, tensor_matmul2) {
     std::memcpy(b->ptr(), B.data(), B.size() * sizeof(float));
     tensor<float>* c = ctx->new_tensor<float>({M, N});
     c->splat_zero();
-    blas::t_f32_matmul(*c, *a, *b);
+    blas::compute_ctx cctx {};
+    blas::t_f32_matmul(cctx, *c, *a, *b);
     for(dim i {}; i < result.size(); ++i) {
         ASSERT_FLOAT_EQ((*c)(i), result[i]);
     }

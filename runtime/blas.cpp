@@ -114,23 +114,31 @@ namespace rtml::blas {
     template <const kernel_density density, typename S, typename V_OP, typename S_OP>
         requires is_dtype<S> && is_vector_op<V_OP, S> && is_scalar_op<S_OP, S>
     static auto RTML_AINLINE RTML_HOT blas_tensor_generic_op(
+        const compute_ctx& ctx,
         tensor<S>& r,       // result
         const tensor<S>& x, // X = src 0
         const tensor<S>& y, // Y = src 1
         V_OP&& v_op,        // Vector OP
         S_OP&& s_op         // Scalar OP
     ) noexcept -> void {
-        const auto [x_d0, x_d1, x_d2, x_d3] {x.dims()};
-        const auto [x_s0, x_s1, x_s2, x_s3] {x.strides()};
-        const auto [y_d0, y_d1, y_d2, y_d3] {y.dims()};
-        const auto [y_s0, y_s1, y_s2, y_s3] {y.strides()};
-        const auto [r_d0, r_d1, r_d2, r_d3] {r.dims()};
-        const auto [r_s0, r_s1, r_s2, r_s3] {r.strides()};
+        assert(y.can_repeat(&x));                                       // Debug only verification - ! must be checked by validation function
+        assert(x.is_shape_eq(&r));                                      // Debug only verification - ! must be checked by validation function
         std::uint8_t* const b_r {r.ptr()};                              // Data base ptr
         const std::uint8_t* const b_x {x.ptr()};                        // Data base ptr
         const std::uint8_t* const b_y {y.ptr()};                        // Data base ptr
-        const dim num_rows {r.row_count()};
-        for (dim row_i {}; row_i < num_rows; ++row_i) {                 // For each row
+        const auto [x_d0, x_d1, x_d2, x_d3] {x.dims()};                 // Dimensions of x
+        const auto [x_s0, x_s1, x_s2, x_s3] {x.strides()};              // Strides of x
+        const auto [y_d0, y_d1, y_d2, y_d3] {y.dims()};                 // Dimensions of y
+        const auto [y_s0, y_s1, y_s2, y_s3] {y.strides()};              // Strides of y
+        const auto [r_d0, r_d1, r_d2, r_d3] {r.dims()};                 // Dimensions of r
+        const auto [r_s0, r_s1, r_s2, r_s3] {r.strides()};              // Strides of r
+        const dim rc {r.row_count()};                                   // Row count (number of columns in first dim): r.dims()[0]
+        const dim tidx {ctx.thread_idx};                                // Current thread index
+        const dim tc {ctx.num_threads};                                 // Current thread count
+        const dim rpt {(rc + tc - 1)/tc};                               // Rows per thread
+        const dim row_start {rpt * tidx};                               // Current thread row interval start
+        const dim row_end {std::min(row_start + rpt, rc)};          // Current thread row interval end
+        for (dim row_i {row_start}; row_i < row_end; ++row_i) {         // For each row
             const dim x_i3 {row_i / (x_d2*x_d1)};                       // Dimension 3 - Linear index to 3D index
             const dim x_i2 {(row_i - x_i3*x_d2*x_d1) / x_d1};           // Dimension 2 - Linear index to 3D index
             const dim x_i1 {row_i - x_i3*x_d2*x_d1 - x_i2*x_d1};        // Dimension 1 - Linear index to 3D index
@@ -164,6 +172,7 @@ namespace rtml::blas {
     template <typename S, typename V_OP, typename S_OP>
         requires is_dtype<S> && is_vector_op<V_OP, S> && is_scalar_op<S_OP, S>
     static auto RTML_AINLINE RTML_HOT tensor_base_op(
+        const compute_ctx& ctx,
         tensor<S>& r,
         const tensor<S>& x,
         const tensor<S>& y,
@@ -172,6 +181,7 @@ namespace rtml::blas {
     ) noexcept -> void {
         if (y.strides()[0] == dtype_traits<S>::k_size) { // Sparse or dense kernel?
             blas_tensor_generic_op<kernel_density::dense, S, V_OP, S_OP>(
+                ctx,
                 r,
                 x,
                 y,
@@ -180,6 +190,7 @@ namespace rtml::blas {
             );
         } else {
             blas_tensor_generic_op<kernel_density::sparse, S, V_OP, S_OP>(
+                ctx,
                 r,
                 x,
                 y,
@@ -189,43 +200,64 @@ namespace rtml::blas {
         }
     }
 
-    auto blas::t_f32_add(tensor<dtypes::f32>& r, const tensor<dtypes::f32>& x, const tensor<dtypes::f32>& y) noexcept -> void {
+    template <typename S> requires is_dtype<S>
+    static auto RTML_AINLINE RTML_HOT blas_tensor_gemm(
+        const compute_ctx& ctx,
+        tensor<S>& r,       // result
+        const tensor<S>& x, // X = src 0
+        const tensor<S>& y  // Y = src 1
+    ) noexcept -> void {
+        assert(y.can_repeat(x));                                        // Debug only verification - ! must be checked by validation function
+        assert(x.is_shape_eq(r));                                       // Debug only verification - ! must be checked by validation function
+        const auto [x_d0, x_d1, x_d2, x_d3] {x.dims()};                 // Dimensions of x
+        const auto [x_s0, x_s1, x_s2, x_s3] {x.strides()};              // Strides of x
+        const auto [y_d0, y_d1, y_d2, y_d3] {y.dims()};                 // Dimensions of y
+        const auto [y_s0, y_s1, y_s2, y_s3] {y.strides()};              // Strides of y
+        const auto [r_d0, r_d1, r_d2, r_d3] {r.dims()};                 // Dimensions of r
+        const auto [r_s0, r_s1, r_s2, r_s3] {r.strides()};              // Strides of r
+        std::uint8_t* const b_r {r.ptr()};                              // Data base ptr
+        const std::uint8_t* const b_x {x.ptr()};                        // Data base ptr
+        const std::uint8_t* const b_y {y.ptr()};                        // Data base ptr
+        const dim num_rows {r.row_count()};                             // Row count (number of columns in first dim): r.dims()[0]
+    }
+
+    auto blas::t_f32_add(const compute_ctx& ctx, tensor<dtypes::f32>& r, const tensor<dtypes::f32>& x, const tensor<dtypes::f32>& y) noexcept -> void {
         tensor_base_op
         <
             std::decay_t<decltype(r)>::dtype,
             decltype(vec::add<std::decay_t<decltype(r)>::dtype>),
             decltype(scalar::add<std::decay_t<decltype(r)>::dtype>)
-        >(r, x, y, vec::add, scalar::add);
+        >(ctx, r, x, y, vec::add, scalar::add);
     }
 
-    auto blas::t_f32_sub(tensor<dtypes::f32>& r, const tensor<dtypes::f32>& x, const tensor<dtypes::f32>& y) noexcept -> void {
+    auto blas::t_f32_sub(const compute_ctx& ctx, tensor<dtypes::f32>& r, const tensor<dtypes::f32>& x, const tensor<dtypes::f32>& y) noexcept -> void {
         tensor_base_op
         <
             std::decay_t<decltype(r)>::dtype,
             decltype(vec::sub<std::decay_t<decltype(r)>::dtype>),
             decltype(scalar::sub<std::decay_t<decltype(r)>::dtype>)
-        >(r, x, y, vec::sub, scalar::sub);
+        >(ctx, r, x, y, vec::sub, scalar::sub);
     }
 
-    auto blas::t_f32_mul(tensor<dtypes::f32>& r, const tensor<dtypes::f32>& x, const tensor<dtypes::f32>& y) noexcept -> void {
+    auto blas::t_f32_mul(const compute_ctx& ctx, tensor<dtypes::f32>& r, const tensor<dtypes::f32>& x, const tensor<dtypes::f32>& y) noexcept -> void {
         tensor_base_op
         <
             std::decay_t<decltype(r)>::dtype,
             decltype(vec::mul<std::decay_t<decltype(r)>::dtype>),
             decltype(scalar::mul<std::decay_t<decltype(r)>::dtype>)
-        >(r, x, y, vec::mul, scalar::mul);
+        >(ctx, r, x, y, vec::mul, scalar::mul);
     }
 
-    auto blas::t_f32_div(tensor<dtypes::f32>& r, const tensor<dtypes::f32>& x, const tensor<dtypes::f32>& y) noexcept -> void {
+    auto blas::t_f32_div(const compute_ctx& ctx, tensor<dtypes::f32>& r, const tensor<dtypes::f32>& x, const tensor<dtypes::f32>& y) noexcept -> void {
         tensor_base_op
         <
             std::decay_t<decltype(r)>::dtype,
             decltype(vec::div<std::decay_t<decltype(r)>::dtype>),
             decltype(scalar::div<std::decay_t<decltype(r)>::dtype>)
-        >(r, x, y, vec::div, scalar::div);
+        >(ctx, r, x, y, vec::div, scalar::div);
     }
 
-    auto t_f32_matmul(tensor<dtypes::f32>& r, const tensor<dtypes::f32>& x, const tensor<dtypes::f32>& y) noexcept -> void {
+    auto t_f32_matmul(const compute_ctx& ctx, tensor<dtypes::f32>& r, const tensor<dtypes::f32>& x, const tensor<dtypes::f32>& y) noexcept -> void {
 
     }
 }
