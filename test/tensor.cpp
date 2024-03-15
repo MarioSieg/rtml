@@ -12,6 +12,7 @@ TEST(tensor, create_1d) {
     tensor<float>* tensor = ctx->new_tensor<float>({25});
     ASSERT_EQ(tensor->dim_count(), 1);
     ASSERT_EQ(tensor->size(), 25*sizeof(float));
+    ASSERT_EQ(tensor->data().size(), 25);
     ASSERT_EQ(tensor->dims()[0], 25);
     ASSERT_EQ(tensor->dims()[1], 1);
     ASSERT_EQ(tensor->dims()[2], 1);
@@ -27,6 +28,7 @@ TEST(tensor, create_2d) {
     tensor<float>* tensor = ctx->new_tensor<float>({4, 4});
     ASSERT_EQ(tensor->dim_count(), 2);
     ASSERT_EQ(tensor->size(), 4*4*sizeof(float));
+    ASSERT_EQ(tensor->data().size(), 4*4);
     ASSERT_EQ(tensor->dims()[0], 4);
     ASSERT_EQ(tensor->dims()[1], 4);
     ASSERT_EQ(tensor->dims()[2], 1);
@@ -42,6 +44,7 @@ TEST(tensor, create_3d) {
     tensor<float>* tensor = ctx->new_tensor<float>({4, 4, 8});
     ASSERT_EQ(tensor->dim_count(), 3);
     ASSERT_EQ(tensor->size(), 4*4*8*sizeof(float));
+    ASSERT_EQ(tensor->data().size(), 4*4*8);
     ASSERT_EQ(tensor->dims()[0], 4);
     ASSERT_EQ(tensor->dims()[1], 4);
     ASSERT_EQ(tensor->dims()[2], 8);
@@ -57,6 +60,7 @@ TEST(tensor, create_4d) {
     tensor<float>* tensor = ctx->new_tensor<float>({4, 4, 8, 3});
     ASSERT_EQ(tensor->dim_count(), 4);
     ASSERT_EQ(tensor->size(), 4*4*8*3*sizeof(float));
+    ASSERT_EQ(tensor->data().size(), 4*4*8*3);
     ASSERT_EQ(tensor->dims()[0], 4);
     ASSERT_EQ(tensor->dims()[1], 4);
     ASSERT_EQ(tensor->dims()[2], 8);

@@ -204,7 +204,7 @@ namespace rtml::blas {
             std::decay_t<decltype(r)>::dtype,
             decltype(vec::sub<std::decay_t<decltype(r)>::dtype>),
             decltype(scalar::sub<std::decay_t<decltype(r)>::dtype>)
-        >(r, x, y, vec::add, scalar::add);
+        >(r, x, y, vec::sub, scalar::sub);
     }
 
     auto blas::t_f32_mul(tensor<dtypes::f32>& r, const tensor<dtypes::f32>& x, const tensor<dtypes::f32>& y) noexcept -> void {
@@ -213,7 +213,7 @@ namespace rtml::blas {
             std::decay_t<decltype(r)>::dtype,
             decltype(vec::mul<std::decay_t<decltype(r)>::dtype>),
             decltype(scalar::mul<std::decay_t<decltype(r)>::dtype>)
-        >(r, x, y, vec::add, scalar::add);
+        >(r, x, y, vec::mul, scalar::mul);
     }
 
     auto blas::t_f32_div(tensor<dtypes::f32>& r, const tensor<dtypes::f32>& x, const tensor<dtypes::f32>& y) noexcept -> void {
@@ -222,7 +222,7 @@ namespace rtml::blas {
             std::decay_t<decltype(r)>::dtype,
             decltype(vec::div<std::decay_t<decltype(r)>::dtype>),
             decltype(scalar::div<std::decay_t<decltype(r)>::dtype>)
-        >(r, x, y, vec::add, scalar::add);
+        >(r, x, y, vec::div, scalar::div);
     }
 
     auto t_f32_matmul(tensor<dtypes::f32>& r, const tensor<dtypes::f32>& x, const tensor<dtypes::f32>& y) noexcept -> void {

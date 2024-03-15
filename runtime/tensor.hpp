@@ -257,7 +257,7 @@ namespace rtml {
                 slice = slice->m_slice;
             }
             std::size_t datasize {dtype_traits<T>::k_size}; // Tensor data size to allocate
-            for (std::size_t i {1}; i < dims.size(); ++i) // Compute total data size
+            for (std::size_t i {0}; i < dims.size(); ++i) // Compute total data size
                 datasize *= std::max<std::decay_t<decltype(dims[i])>>(1, dims[i]);
             assert(!slice || datasize+slice_offset <= slice->m_datasize); // Check if slice has enough space
             static constexpr bool k_align_scalar = false; // Aligned data address to scalar alignment?
