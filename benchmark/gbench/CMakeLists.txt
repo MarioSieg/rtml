@@ -3,7 +3,7 @@ cmake_minimum_required (VERSION 3.10...3.22)
 
 project (benchmark VERSION 1.8.3 LANGUAGES CXX)
 
-option(BENCHMARK_ENABLE_TESTING "Enable testing of the benchmark library." ON)
+option(BENCHMARK_ENABLE_TESTING "Enable testing of the benchmark library." OFF)
 option(BENCHMARK_ENABLE_EXCEPTIONS "Enable the use of exceptions in the benchmark library." ON)
 option(BENCHMARK_ENABLE_LTO "Enable link time optimisation of the benchmark library." OFF)
 option(BENCHMARK_USE_LIBCXX "Build and test using libc++ as the standard library." OFF)

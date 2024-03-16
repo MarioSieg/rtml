@@ -61,6 +61,16 @@ namespace rtml {
         std::size_t m_num_allocs {};
     };
 
+    constexpr auto operator ""_kib(const unsigned long long int x) -> unsigned long long int  {
+        return x << 10;
+    }
+    constexpr auto operator ""_mib(const unsigned long long int x) -> unsigned long long int  {
+        return x << 20;
+    }
+    constexpr auto operator ""_gib(const unsigned long long int x) -> unsigned long long int  {
+        return x << 30;
+    }
+
     class isolate : public std::enable_shared_from_this<isolate> {
     public:
         enum class compute_device : std::uint32_t {
