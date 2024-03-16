@@ -209,7 +209,7 @@ namespace rtml {
             fmt += fmt::format(
                 "Tensor '{}', {} * {}D, Shape [{} X {} X {} X {}], Strides [{} X {} X {} X {}] {:.01f}{}",
                 m_name.data(),
-                dtype_traits<T>::name,
+                dtype_traits<T>::k_name,
                 m_num_dims,
                 m_shape[0],
                 m_shape[1],
@@ -228,7 +228,7 @@ namespace rtml {
                     for (dim i2 {}; i2 < m_shape[1]; ++i2) {
                         fmt.push_back('\t');
                         for (dim i1 {}; i1 < m_shape[0]; ++i1) {
-                            const T x {m_x.u8[dtype_traits<T>::k_size*(i3*m_shape[1]*m_shape[0] + i2*m_shape[0] + i1)]};
+                            const T x {reinterpret_cast<T&>(m_x.u8[dtype_traits<T>::k_size*(i3*m_shape[1]*m_shape[0] + i2*m_shape[0] + i1)])};
                             fmt += fmt::format("{:.03f} ", x);
                         }
                         fmt.push_back('\n');
@@ -238,7 +238,7 @@ namespace rtml {
             }
             return fmt;
         }
-        auto print(std::size_t with_data_elems = 0) const -> void {
+        auto print(const std::size_t with_data_elems = std::numeric_limits<std::size_t>::max()) const -> void {
             std::cout << to_string(with_data_elems) << std::endl;
         }
 

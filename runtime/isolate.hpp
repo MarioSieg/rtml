@@ -85,7 +85,7 @@ namespace rtml {
 
         template <typename T> requires is_dtype<T>
         [[nodiscard]] auto new_tensor(
-            std::initializer_list<const std::int64_t> dims,
+            std::initializer_list<const dim> dims,
             tensor<T>* slice = nullptr,
             std::size_t slice_offset = 0
         ) -> tensor<T>* {
@@ -94,7 +94,7 @@ namespace rtml {
 
         template <typename T> requires is_dtype<T>
         [[nodiscard]] auto new_tensor(
-            std::span<const std::int64_t> dims,
+            std::span<const dim> dims,
             tensor<T>* slice = nullptr,
             std::size_t slice_offset = 0
         ) -> tensor<T>* {

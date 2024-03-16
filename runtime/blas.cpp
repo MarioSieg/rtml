@@ -207,6 +207,8 @@ namespace rtml::blas {
         const tensor<S>& x, // X = src 0
         const tensor<S>& y  // Y = src 1
     ) noexcept -> void {
+        assert(x.is_matmul_compatible(&y));
+        assert(!x.is_transposed());
         static constexpr dim block_x {16};
         static constexpr dim block_y {16};
         static_assert(block_x == block_y);
@@ -253,10 +255,9 @@ namespace rtml::blas {
             // TODO: no work to do - yield threads?
             return;
         }
-        constexpr dim nrc {1};
         for (dim iir1 {ir110}; iir1 < ir111; iir1 += block_y)
         for (dim iir0 {ir010}; iir0 < ir011; iir0 += block_x)
-        for (dim ir1 {iir1}; ir1 < iir1 + block_y && ir1 < ir111; ir1 += nrc) {
+        for (dim ir1 {iir1}; ir1 < iir1 + block_y && ir1 < ir111; ++ir1) {
             const dim i13 {ir1/(y_d2*r_d2)};
             const dim i12 {(ir1 - i13*y_d2*r_d1)/r_d1};
             const dim i11 {ir1 - i13*y_d2*r_d1 - i12*r_d1};
@@ -269,14 +270,14 @@ namespace rtml::blas {
                 b_x + i02*x_s2 + i03*x_s3
             };
             const auto* const p_y_col {reinterpret_cast<const S*>(
-                y_dense ?
+                b_y + (y_dense ?
                     (i11 + i12*y_d1 + i13*y_d2*y_d1) * row_size :
-                    i11*y_s1 + i12*y_s2 + i13*y_s3
+                    i11*y_s1 + i12*y_s2 + i13*y_s3)
             )};
             auto* const p_r_col {reinterpret_cast<S*>(
                 b_r + i1*r_s1 + i2*r_s2 + i3*r_s3
             )};
-            for (dim ir0 {iir0}; ir0 < iir0 + block_x && ir0 < ir011; ir0 += nrc) { // Micro kernel
+            for (dim ir0 {iir0}; ir0 < iir0 + block_x && ir0 < ir011; ++ir0) { // Micro kernel
                 vec::dot( // BLAS kernel
                     x_d0,
                     &p_r_col[ir0 - iir0],
