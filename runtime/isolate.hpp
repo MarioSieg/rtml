@@ -3,10 +3,12 @@
 #pragma once
 
 #include <span>
+#include <string>
+#include <cassert>
 
 #include "tensor_base.hpp"
 
-#define RTML_LOG_ENABLE true
+#define RTML_LOG_ENABLE false
 
 #if RTML_LOG_ENABLE
 #include <spdlog/spdlog.h>
@@ -32,7 +34,7 @@ namespace rtml {
         pool(pool&&) = delete;
         auto operator=(const pool&) -> pool& = delete;
         auto operator=(pool&&) -> pool& = delete;
-        ~pool() = default;
+        ~pool();
 
         static constexpr auto k_natural_align {alignof(std::max_align_t) > 8 ? alignof(std::max_align_t) : 8};
         static constexpr bool k_force_align {true}; // Always force correct alignment of allocated types
@@ -50,13 +52,13 @@ namespace rtml {
         auto print_info() const -> void;
         [[nodiscard]] auto size() const noexcept -> std::size_t { return m_size; }
         [[nodiscard]] auto num_allocs() const noexcept -> std::size_t { return m_num_allocs; }
-        [[nodiscard]] auto data() const noexcept -> std::uint8_t* { return m_storage.get(); }
+        [[nodiscard]] auto data() const noexcept -> std::uint8_t* { return m_buf; }
         [[nodiscard]] auto needle() const noexcept -> std::uint8_t* { return m_bot; }
-        [[nodiscard]] auto bytes_allocated() const noexcept -> std::size_t { return m_size-(m_bot-m_storage.get()); }
+        [[nodiscard]] auto bytes_allocated() const noexcept -> std::size_t { return m_size-(m_bot-m_buf); }
 
     private:
         const std::size_t m_size;
-        const std::unique_ptr<std::uint8_t[]> m_storage;
+        std::uint8_t* m_buf {};
         std::uint8_t* m_bot {};
         std::size_t m_num_allocs {};
     };

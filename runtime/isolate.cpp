@@ -10,16 +10,23 @@
 #endif
 
 namespace rtml {
-    pool::pool(const std::size_t size) : m_size{size}, m_storage{new std::uint8_t[size]} {
+    pool::pool(const std::size_t size) : m_size{size} {
         if (!size) [[unlikely]]
             std::abort();
+        m_buf = static_cast<std::uint8_t*>(std::malloc(size)); // Malloc to avoid initialization of memory and to use lazy mapping
+        if (!m_buf) [[unlikely]]
+            std::abort();
         rtml_log_info("Created linear memory pool of size {:.01f} MiB", static_cast<double>(size)/std::pow(1024.0, 2.0));
-        m_bot = m_storage.get() + size;
+        m_bot = m_buf + size;
+    }
+
+    pool::~pool() {
+        std::free(m_buf);
     }
 
     auto pool::alloc_raw(const std::size_t size) noexcept -> void* {
         m_bot -= size;
-        if (m_bot < m_storage.get()) [[unlikely]]
+        if (m_bot < m_buf) [[unlikely]]
             std::abort();
         ++m_num_allocs;
         return m_bot;
@@ -33,14 +40,14 @@ namespace rtml {
     }
 
     auto pool::print_info() const -> void {
-        const std::ptrdiff_t used {std::max<decltype(used)>(0, m_bot-m_storage.get())};
+        const std::ptrdiff_t used {std::max<decltype(used)>(0, m_bot-m_buf)};
         const double perc {100.0*static_cast<double>(m_size - used)/static_cast<double>(m_size)};
         std::printf(
             "Pool: %.03f/%.01f MiB, used: %.03f%%, %zu allocs\n",
             static_cast<double>(m_size-used)/std::pow(1024.0, 2.0),
            static_cast<double>(m_size)/std::pow(1024.0, 2.0), perc, m_num_allocs
         );
-        std::printf("Mem: &[%p, %p]\n", static_cast<void*>(m_storage.get()), static_cast<void*>(m_bot));
+        std::printf("Mem: &[%p, %p]\n", static_cast<void*>(m_buf), static_cast<void*>(m_bot));
     }
 
     struct context_proxy final : isolate {

@@ -195,20 +195,22 @@ namespace rtml {
             const std::size_t total_size = m_datasize+sizeof(*this);
             auto size {static_cast<double>(total_size)};
             std::string_view unit {"B"};
-            const auto cvt_nit {[&](const std::size_t lim, const std::string_view name) {
-                if (total_size > lim) {
-                    size /= static_cast<double>(lim);
-                    unit = name;
-                }
-            }};
-            cvt_nit(1<<10, "KiB");
-            cvt_nit(1<<20, "MiB");
-            cvt_nit(1<<30, "GiB");
+            if (total_size > 1<<30) {
+                size /= static_cast<double>(1<<30);
+                unit = "GiB";
+            } else if (total_size > 1<<20) {
+                size /= static_cast<double>(1<<20);
+                unit = "MiB";
+            } else if (total_size > 1<<10) {
+                size /= static_cast<double>(1<<10);
+                unit = "KiB";
+            }
             std::string fmt {};
             fmt.reserve(0x100+sizeof("2.000")*with_data_elems);
             fmt += fmt::format(
-                "Tensor '{}', {} * {}D, Shape [{} X {} X {} X {}], Strides [{} X {} X {} X {}] {:.01f}{}",
+                "Tensor {}{}{} * {}D, Shape [{} X {} X {} X {}], Strides [{}B X {}B X {}B X {}B] {:.01f}{}",
                 m_name.data(),
+                m_name[0] ? ": " : "",
                 dtype_traits<T>::k_name,
                 m_num_dims,
                 m_shape[0],
@@ -257,8 +259,10 @@ namespace rtml {
                 slice = slice->m_slice;
             }
             std::size_t datasize {dtype_traits<T>::k_size}; // Tensor data size to allocate
-            for (std::size_t i {0}; i < dims.size(); ++i) // Compute total data size
-                datasize *= std::max<std::decay_t<decltype(dims[i])>>(1, dims[i]);
+            for (std::size_t i {0}; i < dims.size(); ++i) { // Accumulate total data size
+                assert(dims[i] > 0); // Check if dimensions are valid
+                datasize *= dims[i];
+            }
             assert(!slice || datasize+slice_offset <= slice->m_datasize); // Check if slice has enough space
             static constexpr bool k_align_scalar = false; // Aligned data address to scalar alignment?
             m_x.u8 = slice
