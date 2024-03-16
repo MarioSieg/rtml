@@ -207,18 +207,84 @@ namespace rtml::blas {
         const tensor<S>& x, // X = src 0
         const tensor<S>& y  // Y = src 1
     ) noexcept -> void {
-        assert(y.can_repeat(x));                                        // Debug only verification - ! must be checked by validation function
-        assert(x.is_shape_eq(r));                                       // Debug only verification - ! must be checked by validation function
+        static constexpr dim block_x {16};
+        static constexpr dim block_y {16};
+        static_assert(block_x == block_y);
+        std::uint8_t* const b_r {r.ptr()};                              // Data base ptr
+        const std::uint8_t* const b_x {x.ptr()};                        // Data base ptr
+        const std::uint8_t* const b_y {y.ptr()};                        // Data base ptr
         const auto [x_d0, x_d1, x_d2, x_d3] {x.dims()};                 // Dimensions of x
         const auto [x_s0, x_s1, x_s2, x_s3] {x.strides()};              // Strides of x
         const auto [y_d0, y_d1, y_d2, y_d3] {y.dims()};                 // Dimensions of y
         const auto [y_s0, y_s1, y_s2, y_s3] {y.strides()};              // Strides of y
         const auto [r_d0, r_d1, r_d2, r_d3] {r.dims()};                 // Dimensions of r
         const auto [r_s0, r_s1, r_s2, r_s3] {r.strides()};              // Strides of r
-        std::uint8_t* const b_r {r.ptr()};                              // Data base ptr
-        const std::uint8_t* const b_x {x.ptr()};                        // Data base ptr
-        const std::uint8_t* const b_y {y.ptr()};                        // Data base ptr
-        const dim num_rows {r.row_count()};                             // Row count (number of columns in first dim): r.dims()[0]
+        const dim tidx {ctx.thread_idx};                                // Current thread index
+        const dim tc {ctx.num_threads};                                 // Current thread count
+        const bool y_dense {y.is_dense()};
+        assert(r_d0 == x_d1);
+        assert(r_d1 == y_d1);
+        assert(r_d2 == y_d2);
+        assert(r_d3 == y_d3);
+        assert(x_s0 == dtype_traits<S>::k_size);
+        assert(y_s0 == dtype_traits<S>::k_size);
+        assert(r_s0 == dtype_traits<S>::k_size);
+        assert(r_s0 <= r_s1);
+        assert(r_s1 <= r_s2);
+        assert(r_s2 <= r_s3);
+        assert(y_d2 % x_d2 == 0);
+        assert(y_d3 % x_d3 == 0);
+        const dim r2 {y_d2/x_d2};
+        const dim r3 {y_d3/x_d3};
+        const dim row_size {y_d0*static_cast<dim>(dtype_traits<S>::k_size)};
+        const dim nr0 {x_d1};
+        const dim nr1 {r_d1*y_d2*y_d3};
+        const dim nth0 {nr0 > nr1 ? tc : 1};
+        const dim nth1 {nr0 > nr1 ? 1 : tc};
+        const dim ith0 {tidx % nth0};
+        const dim ith1 {tidx / nth0};
+        const dim dr0 {(nr0 + nth0 - 1)/nth0};
+        const dim dr1 {(nr1 + nth1 - 1)/nth1};
+        const dim ir010 {dr0*ith0};
+        const dim ir011 {std::min(ir010 + dr0, nr0)};
+        const dim ir110 {dr1*ith1};
+        const dim ir111 {std::min(ir110 + dr1, nr1)};
+        if (ir010 >= ir011 || ir110 >= ir111) {
+            // TODO: no work to do - yield threads?
+            return;
+        }
+        constexpr dim nrc {1};
+        for (dim iir1 {ir110}; iir1 < ir111; iir1 += block_y)
+        for (dim iir0 {ir010}; iir0 < ir011; iir0 += block_x)
+        for (dim ir1 {iir1}; ir1 < iir1 + block_y && ir1 < ir111; ir1 += nrc) {
+            const dim i13 {ir1/(y_d2*r_d2)};
+            const dim i12 {(ir1 - i13*y_d2*r_d1)/r_d1};
+            const dim i11 {ir1 - i13*y_d2*r_d1 - i12*r_d1};
+            const dim i03 {i13/r3};
+            const dim i02 {i12/r2};
+            const dim i1 {i11};
+            const dim i2 {i12};
+            const dim i3 {i13};
+            const std::uint8_t* const p_x_row {
+                b_x + i02*x_s2 + i03*x_s3
+            };
+            const auto* const p_y_col {reinterpret_cast<const S*>(
+                y_dense ?
+                    (i11 + i12*y_d1 + i13*y_d2*y_d1) * row_size :
+                    i11*y_s1 + i12*y_s2 + i13*y_s3
+            )};
+            auto* const p_r_col {reinterpret_cast<S*>(
+                b_r + i1*r_s1 + i2*r_s2 + i3*r_s3
+            )};
+            for (dim ir0 {iir0}; ir0 < iir0 + block_x && ir0 < ir011; ir0 += nrc) { // Micro kernel
+                vec::dot( // BLAS kernel
+                    x_d0,
+                    &p_r_col[ir0 - iir0],
+                    reinterpret_cast<const S*>(p_x_row + ir0*x_s1),
+                    p_y_col
+                );
+            }
+        }
     }
 
     auto blas::t_f32_add(const compute_ctx& ctx, tensor<dtypes::f32>& r, const tensor<dtypes::f32>& x, const tensor<dtypes::f32>& y) noexcept -> void {
@@ -258,6 +324,6 @@ namespace rtml::blas {
     }
 
     auto t_f32_matmul(const compute_ctx& ctx, tensor<dtypes::f32>& r, const tensor<dtypes::f32>& x, const tensor<dtypes::f32>& y) noexcept -> void {
-
+        blas_tensor_gemm(ctx, r, x, y);
     }
 }
