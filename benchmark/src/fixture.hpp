@@ -1,3 +1,5 @@
+// Copyright Mario "Neo" Sieg 2024. All rights reserved. mario.sieg.64@gmail.com
+
 #pragma once
 
 #include <benchmark/benchmark.h>
@@ -28,7 +30,6 @@ public:
         constexpr float y {2.0f};
         ctx = isolate::create("test", isolate::compute_device::cpu, 4_gib);
         a = ctx->new_tensor<float>(k_shapes);
-        a->print(0);
         b = ctx->new_tensor<float>(k_shapes);
         c = ctx->new_tensor<float>(k_shapes);
         a->splat(x);
