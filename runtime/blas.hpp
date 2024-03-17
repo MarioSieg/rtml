@@ -9,10 +9,10 @@
 namespace rtml::blas {
     struct compute_ctx {
         const dim thread_idx;     // Must be >= 0
-        const dim num_threads;    // Must be >= 1
+        const dim num_threads;    // Must be > 0
 
-        constexpr compute_ctx(const dim thread_idx, const dim num_threads) noexcept
-            : thread_idx{std::max<dim>(1, thread_idx)},
+        constexpr explicit compute_ctx(const dim thread_idx = 0, const dim num_threads = 1) noexcept
+            : thread_idx{std::max<dim>(0, thread_idx)},
                 num_threads{std::max<dim>(1, num_threads)} {}
     };
 
