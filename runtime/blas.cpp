@@ -1,4 +1,6 @@
 // Copyright Mario "Neo" Sieg 2024. All rights reserved. mario.sieg.64@gmail.com
+// BLAS (basic linear algebra subprograms) for RTML (runtime machine learning) library
+// Implements core tensor operations (which are not strictly BLAS routines) and some basic linear algebra operations
 
 #include <algorithm>
 #include <cmath>
@@ -12,9 +14,6 @@ namespace rtml::blas {
 #define RTML_HOT __attribute__((hot))
 
     namespace scalar {
-        static constexpr float k_rtml_sqrt2pi {0.79788456080286535587989211986876f};
-        static constexpr float k_rtml_gelu_coeff {0.044715f};
-
         template <typename S> requires is_dtype<S>
         [[nodiscard]] static constexpr auto RTML_AINLINE RTML_HOT add(const S x, const S y) noexcept -> S { return x + y; }
         template <typename S> requires is_dtype<S>
@@ -23,67 +22,61 @@ namespace rtml::blas {
         [[nodiscard]] static constexpr auto RTML_AINLINE RTML_HOT mul(const S x, const S y) noexcept -> S { return x * y; }
         template <typename S> requires is_dtype<S>
         [[nodiscard]] static constexpr auto RTML_AINLINE RTML_HOT div(const S x, const S y) noexcept -> S { return x / y; }
-
-        [[nodiscard]] static constexpr auto RTML_AINLINE RTML_HOT softmax(const dtypes::f32 x) noexcept -> float {
-            return std::expf(x);
-        }
-        [[nodiscard]] static constexpr auto RTML_AINLINE RTML_HOT sigmoid(const dtypes::f32 x) noexcept -> float {
-            return 1.0f / (1.0f + std::expf(-x));
-        }
-        [[nodiscard]] static constexpr auto RTML_AINLINE RTML_HOT tanh(const dtypes::f32 x) noexcept -> float {
-            return std::tanh(x);
-        }
-        [[nodiscard]] static constexpr auto RTML_AINLINE RTML_HOT relu(const dtypes::f32 x) noexcept -> float {
-            return std::max(x, 0.0f);
-        }
-        [[nodiscard]] static constexpr auto RTML_AINLINE RTML_HOT gelu(const dtypes::f32 x) noexcept -> float {
-            return 0.5f * x * (1.0f + std::tanh(k_rtml_sqrt2pi * x * (1.0f + k_rtml_gelu_coeff * x * x)));
-        }
-        [[nodiscard]] static constexpr auto RTML_AINLINE RTML_HOT silu(const dtypes::f32 x) noexcept -> float {
-            return x / (1.0f + std::exp(-x));
-        }
     }
 
     namespace vec {
+        static constexpr float k_rtml_sqrt2pi {0.79788456080286535587989211986876f}; // sqrt(2/PI)
+        static constexpr float k_rtml_gelu_coeff {0.044715f};
+
         template <typename S> requires is_dtype<S>
         static auto RTML_HOT softmax(const std::size_t n, S* const ov, const S* const x) noexcept -> void {
-            for (std::size_t i = 0; i < n; ++i) ov[i] = scalar::softmax(x[i]);
+            for (std::size_t i = 0; i < n; ++i)
+                ov[i] = std::expf(x[i]);
         }
         template <typename S> requires is_dtype<S>
         static auto RTML_HOT sigmoid(const std::size_t n, S* const ov, const S* const x) noexcept -> void {
-            for (std::size_t i = 0; i < n; ++i) ov[i] = scalar::sigmoid(x[i]);
+            for (std::size_t i = 0; i < n; ++i)
+                ov[i] = 1.0f / (1.0f + std::expf(-x[i]));
         }
         template <typename S> requires is_dtype<S>
         static auto RTML_HOT tanh(const std::size_t n, S* const ov, const S* const x) noexcept -> void {
-            for (std::size_t i = 0; i < n; ++i) ov[i] = scalar::tanh(x[i]);
+            for (std::size_t i = 0; i < n; ++i)
+                ov[i] = std::tanh(x[i]);
         }
         template <typename S> requires is_dtype<S>
         static auto RTML_HOT relu(const std::size_t n, S* const ov, const S* const x) noexcept -> void {
-            for (std::size_t i = 0; i < n; ++i) ov[i] = scalar::relu(x[i]);
+            for (std::size_t i = 0; i < n; ++i)
+                ov[i] = std::max(x[i], 0.0f);
         }
         template <typename S> requires is_dtype<S>
         static auto RTML_HOT gelu(const std::size_t n, S* const ov, const S* const x) noexcept -> void {
-            for (std::size_t i = 0; i < n; ++i) ov[i] = scalar::gelu(x[i]);
+            for (std::size_t i = 0; i < n; ++i)
+                ov[i] = 0.5f * x[i] * (1.0f + std::tanh(k_rtml_sqrt2pi * x[i] * (1.0f + k_rtml_gelu_coeff * x[i] * x[i])));
         }
         template <typename S> requires is_dtype<S>
         static auto RTML_HOT silu(const std::size_t n, S* const ov, const S* const x) noexcept -> void {
-            for (std::size_t i = 0; i < n; ++i) ov[i] = scalar::silu(x[i]);
+            for (std::size_t i = 0; i < n; ++i)
+                ov[i] = x[i] / (1.0f + std::exp(-x[i]));
         }
         template <typename S> requires is_dtype<S>
         static auto RTML_HOT add(const std::size_t n, S* const ov, const S* const x, const S* const y) noexcept -> void {
-            for (std::size_t i = 0; i < n; ++i) ov[i] = scalar::add(x[i], y[i]);
+            for (std::size_t i = 0; i < n; ++i)
+                ov[i] = scalar::add(x[i], y[i]);
         }
         template <typename S> requires is_dtype<S>
         static auto RTML_HOT sub(const std::size_t n, S* const ov, const S* const x, const S* const y) noexcept -> void {
-            for (std::size_t i = 0; i < n; ++i) ov[i] = scalar::sub(x[i], y[i]);
+            for (std::size_t i = 0; i < n; ++i)
+                ov[i] = scalar::sub(x[i], y[i]);
         }
         template <typename S> requires is_dtype<S>
         static auto RTML_HOT mul(const std::size_t n, S* const ov, const S* const x, const S* const y) noexcept -> void {
-            for (std::size_t i = 0; i < n; ++i) ov[i] = scalar::mul(x[i], y[i]);
+            for (std::size_t i = 0; i < n; ++i)
+                ov[i] = scalar::mul(x[i], y[i]);
         }
         template <typename S> requires is_dtype<S>
         static auto RTML_HOT div(const std::size_t n, S* const ov, const S* const x, const S* const y) noexcept -> void {
-            for (std::size_t i = 0; i < n; ++i) ov[i] = scalar::div(x[i], y[i]);
+            for (std::size_t i = 0; i < n; ++i)
+                ov[i] = scalar::div(x[i], y[i]);
         }
         template <typename S> requires is_dtype<S>
         static auto RTML_HOT dot(const std::size_t n, S* const os, const S* const x, const S* const y) noexcept -> void {
