@@ -6,13 +6,11 @@
 #include <cmath>
 
 #include "blas.hpp"
+#include "blas.hpp"
 #include "isolate.hpp"
 #include "tensor.hpp"
 
 namespace rtml::blas {
-#define RTML_AINLINE __attribute__((always_inline))
-#define RTML_HOT __attribute__((hot))
-
     namespace scalar {
         template <typename S> requires is_dtype<S>
         [[nodiscard]] static constexpr auto RTML_AINLINE RTML_HOT add(const S x, const S y) noexcept -> S { return x + y; }
@@ -193,13 +191,14 @@ namespace rtml::blas {
         }
     }
 
-    template <typename S> requires is_dtype<S>
-    static auto RTML_AINLINE RTML_HOT blas_tensor_gemm(
+    // BLAS SGEMM (Single precision General Matrix Multiply)
+    static auto RTML_AINLINE RTML_HOT blas_tensor_sgemm(
         const compute_ctx& ctx,
-        tensor<S>& r,       // result
-        const tensor<S>& x, // X = src 0
-        const tensor<S>& y  // Y = src 1
+        tensor<>& r,       // result
+        const tensor<>& x, // X = src 0
+        const tensor<>& y  // Y = src 1
     ) noexcept -> void {
+        static_assert(std::is_same_v<std::decay_t<decltype(r)>::dtype, dtypes::f32>);
         assert(x.is_matmul_compatible(&y));
         assert(!x.is_transposed());
         static constexpr dim block_x {16};
@@ -221,9 +220,9 @@ namespace rtml::blas {
         assert(r_d1 == y_d1);
         assert(r_d2 == y_d2);
         assert(r_d3 == y_d3);
-        assert(x_s0 == dtype_traits<S>::k_size);
-        assert(y_s0 == dtype_traits<S>::k_size);
-        assert(r_s0 == dtype_traits<S>::k_size);
+        assert(x_s0 == dtype_traits<dtypes::f32>::k_size);
+        assert(y_s0 == dtype_traits<dtypes::f32>::k_size);
+        assert(r_s0 == dtype_traits<dtypes::f32>::k_size);
         assert(r_s0 <= r_s1);
         assert(r_s1 <= r_s2);
         assert(r_s2 <= r_s3);
@@ -231,7 +230,7 @@ namespace rtml::blas {
         assert(y_d3 % x_d3 == 0);
         const dim r2 {y_d2/x_d2};
         const dim r3 {y_d3/x_d3};
-        const dim row_size {y_d0*static_cast<dim>(dtype_traits<S>::k_size)};
+        const dim row_size {y_d0*static_cast<dim>(dtype_traits<dtypes::f32>::k_size)};
         const dim nr0 {x_d1};
         const dim nr1 {r_d1*y_d2*y_d3};
         const dim nth0 {nr0 > nr1 ? tc : 1};
@@ -262,19 +261,19 @@ namespace rtml::blas {
             const std::uint8_t* const p_x_row {
                 b_x + i02*x_s2 + i03*x_s3
             };
-            const auto* const p_y_col {reinterpret_cast<const S*>(
+            const auto* const p_y_col {reinterpret_cast<const dtypes::f32*>(
                 b_y + (y_dense ?
                     (i11 + i12*y_d1 + i13*y_d2*y_d1) * row_size :
                     i11*y_s1 + i12*y_s2 + i13*y_s3)
             )};
-            auto* const p_r_col {reinterpret_cast<S*>(
+            auto* const p_r_col {reinterpret_cast<dtypes::f32*>(
                 b_r + i1*r_s1 + i2*r_s2 + i3*r_s3
             )};
             for (dim ir0 {iir0}; ir0 < iir0 + block_x && ir0 < ir011; ++ir0) { // Micro kernel
                 vec::dot( // BLAS kernel
                     x_d0,
                     &p_r_col[ir0 - iir0],
-                    reinterpret_cast<const S*>(p_x_row + ir0*x_s1),
+                    reinterpret_cast<const dtypes::f32*>(p_x_row + ir0*x_s1),
                     p_y_col
                 );
             }
@@ -317,7 +316,7 @@ namespace rtml::blas {
         >(ctx, r, x, y, vec::div, scalar::div);
     }
 
-    auto t_f32_matmul(const compute_ctx& ctx, tensor<dtypes::f32>& r, const tensor<dtypes::f32>& x, const tensor<dtypes::f32>& y) noexcept -> void {
-        blas_tensor_gemm(ctx, r, x, y);
+    auto t_f32_matmul(const compute_ctx& ctx, tensor<>& r, const tensor<>& x, const tensor<>& y) noexcept -> void {
+        blas_tensor_sgemm(ctx, r, x, y);
     }
 }

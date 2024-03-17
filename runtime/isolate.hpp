@@ -2,24 +2,8 @@
 
 #pragma once
 
-#include <span>
-#include <string>
-#include <cassert>
-
+#include "base.hpp"
 #include "tensor_base.hpp"
-
-#define RTML_LOG_ENABLE false
-
-#if RTML_LOG_ENABLE
-#include <spdlog/spdlog.h>
-#define rtml_log_info SPDLOG_INFO
-#define rtml_log_warn SPDLOG_WARN
-#define rtml_log_error SPDLOG_ERROR
-#else
-#define rtml_log_info(...)
-#define rtml_log_warn(...)
-#define rtml_log_error(...)
-#endif
 
 namespace rtml {
     template <typename T>

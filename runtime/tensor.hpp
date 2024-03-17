@@ -181,16 +181,16 @@ namespace rtml {
             return (*this)(unroll_index(i));
         }
 
-        auto set_name(const char* name) -> void {
+        auto RTML_COLD set_name(const char* name) -> void {
             std::strncpy(m_name.data(), name, k_max_name);
             m_name[k_max_name-1] = '\0';
         }
         template<typename... Args>
-        auto format_name(const fmt::format_string<Args...>& fmt, Args&&... args) -> void {
+        auto RTML_COLD format_name(const fmt::format_string<Args...>& fmt, Args&&... args) -> void {
             const std::string formatted {fmt::format(fmt, std::forward<Args>(args)...)}; // TODO: avoid clone
             set_name(formatted.c_str());
         }
-        [[nodiscard]] auto to_string(std::size_t with_data_elems = 0) const -> std::string {
+        [[nodiscard]] auto RTML_COLD to_string(std::size_t with_data_elems = 0) const -> std::string {
             static_assert(k_max_dims == 4);
             const std::size_t total_size = m_datasize+sizeof(*this);
             auto size {static_cast<double>(total_size)};
@@ -240,7 +240,7 @@ namespace rtml {
             }
             return fmt;
         }
-        auto print(const std::size_t with_data_elems = std::numeric_limits<std::size_t>::max()) const -> void {
+        auto RTML_COLD print(const std::size_t with_data_elems = std::numeric_limits<std::size_t>::max()) const -> void {
             std::cout << to_string(with_data_elems) << std::endl;
         }
 
