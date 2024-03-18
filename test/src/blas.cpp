@@ -61,7 +61,6 @@ TEST(blas, vec_dot) {
 #endif
 
 TEST(blas, tensor_add) {
-    rtml_assert(1+2+3==2, "Noel");
     std::mt19937_64 prng {};
     std::uniform_real_distribution<float> dist{-1.0f, 1.0f};
     const float x {dist(prng)};
