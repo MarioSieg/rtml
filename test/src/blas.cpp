@@ -171,7 +171,7 @@ TEST(blas, tensor_div) {
 TEST(blas, tensor_matmul2) {
     constexpr std::size_t M {4}, N {4}, K {4};
 
-    // matrix A (4 X 36)
+    // matrix A (M x K)
     static constexpr std::array<float, M * K> A {
        2.0f, 9.0f, 2.0f, 10.0f,
         6.0f, 4.0f, 3.0f, 6.0f,
@@ -179,15 +179,15 @@ TEST(blas, tensor_matmul2) {
         8.0f, 8.0f, 3.0f, 3.0f
     };
 
-    // matrix B (16 X 36)
-   static constexpr std::array<float, N * K> B {
+    // matrix B (N x K)
+    static constexpr std::array<float, N * K> B {
         9.0f, 7.0f, 1.0f, 3.0f,
        5.0f, 9.0f, 7.0f, 6.0f,
        1.0f, 10.0f, 1.0f, 1.0f,
        7.0f, 2.0f, 4.0f, 9.0f
     };
 
-    // matrix C (4 x 16)
+    // matrix C (M x N)
     static constexpr std::array<float, M * N> result {
         135., 135., 107., 152.,
         119., 120.,  61.,  99.,

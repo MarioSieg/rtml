@@ -191,7 +191,14 @@ namespace rtml::blas {
         }
     }
 
-    // BLAS SGEMM (Single precision General Matrix Multiply)
+    /*
+     * BLAS SGEMM (Single precision General Matrix Multiply)
+     *
+     * Input:
+     *  - Matrix A with dimensions [n, k] is represented as a tensor with shape [Dim3, Dim2, n, k].
+     *  - Matrix B with dimensions [k, m] is internally considered to be transposed,
+     *  - The result of the multiplication is Matrix C with dimensions [n, m], resulting from the conventional matrix product of A and the transpose of B.
+     */
     static auto RTML_AINLINE RTML_HOT blas_tensor_sgemm(
         const compute_ctx& ctx,
         tensor<>& r,       // result
@@ -250,7 +257,7 @@ namespace rtml::blas {
         for (dim iir1 {ir110}; iir1 < ir111; iir1 += block_y)
         for (dim iir0 {ir010}; iir0 < ir011; iir0 += block_x)
         for (dim ir1 {iir1}; ir1 < iir1 + block_y && ir1 < ir111; ++ir1) {
-            const dim i13 {ir1/(y_d2*r_d2)};
+            const dim i13 {ir1/(y_d2*r_d1)};
             const dim i12 {(ir1 - i13*y_d2*r_d1)/r_d1};
             const dim i11 {ir1 - i13*y_d2*r_d1 - i12*r_d1};
             const dim i03 {i13/r3};
