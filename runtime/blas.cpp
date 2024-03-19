@@ -193,13 +193,63 @@ namespace rtml::blas {
 
     /*
      * BLAS SGEMM (Single precision General Matrix Multiply)
+     */
+    static auto RTML_AINLINE RTML_HOT blas_tensor_sgemm_naive(
+        const compute_ctx& ctx,
+        tensor<>& r,       // result
+        const tensor<>& x, // X = src 0
+        const tensor<>& y  // Y = src 1
+    ) noexcept -> void {
+        static_assert(std::is_same_v<std::decay_t<decltype(r)>::dtype, dtypes::f32>);
+        assert(x.is_matmul_compatible(&y));
+        assert(!x.is_transposed());
+        static constexpr dim block_x {16};
+        static constexpr dim block_y {16};
+        static_assert(block_x == block_y);
+        std::uint8_t* const b_r {r.ptr()};                              // Data base ptr
+        const std::uint8_t* const b_x {x.ptr()};                        // Data base ptr
+        const std::uint8_t* const b_y {y.ptr()};                        // Data base ptr
+        const auto [x_d0, x_d1, x_d2, x_d3] {x.dims()};                 // Dimensions of x
+        const auto [x_s0, x_s1, x_s2, x_s3] {x.strides()};              // Strides of x
+        const auto [y_d0, y_d1, y_d2, y_d3] {y.dims()};                 // Dimensions of y
+        const auto [y_s0, y_s1, y_s2, y_s3] {y.strides()};              // Strides of y
+        const auto [r_d0, r_d1, r_d2, r_d3] {r.dims()};                 // Dimensions of r
+        const auto [r_s0, r_s1, r_s2, r_s3] {r.strides()};              // Strides of r
+        for (dim i3 {}; i3 < r_d3; ++i3) {
+            for (dim i2 {}; i2 < r_d2; ++i2) {
+                for (dim i1 {}; i1 < r_d1; ++i1) {
+                    for (dim i0 {}; i0 < r_d1; ++i0) {
+                        double sum = 0.0f; // TODO: optimize and use vec::dot
+                        for (dim k {}; k < x_d0; ++k) {
+                            const auto* p_x {reinterpret_cast<const dtypes::f32*>(
+                                b_x + k*x_s0 + i0*x_s1 + i2*x_s2 + i3*x_s3
+                            )};
+                            const auto* p_y {reinterpret_cast<const dtypes::f32*>(
+                                b_y + i1*y_s0 + k*y_s1 + i2*y_s2 + i3*y_s3
+                            )};
+                            sum += static_cast<double>(*p_x * *p_y);
+                        }
+                        auto* p_r {reinterpret_cast<dtypes::f32*>(
+                            b_r + i1*r_s0 + i0*r_s1 + i2*r_s2 + i3*r_s3
+                        )};
+                        *p_r = static_cast<dtypes::f32>(sum);
+                    }
+                }
+            }
+        }
+    }
+
+    /*
+     * This version is faster but computes transposed result and y.
+     * BLAS SGEMM (Single precision General Matrix Multiply)
      *
      * Input:
      *  - Matrix A with dimensions [n, k] is represented as a tensor with shape [Dim3, Dim2, n, k].
      *  - Matrix B with dimensions [k, m] is internally considered to be transposed,
      *  - The result of the multiplication is Matrix C with dimensions [n, m], resulting from the conventional matrix product of A and the transpose of B.
      */
-    static auto RTML_AINLINE RTML_HOT blas_tensor_sgemm(
+#if 0
+    static auto RTML_AINLINE RTML_HOT blas_tensor_sgemm_tranposed(
         const compute_ctx& ctx,
         tensor<>& r,       // result
         const tensor<>& x, // X = src 0
@@ -286,6 +336,7 @@ namespace rtml::blas {
             }
         }
     }
+#endif
 
     auto blas::t_f32_add(const compute_ctx& ctx, tensor<dtypes::f32>& r, const tensor<dtypes::f32>& x, const tensor<dtypes::f32>& y) noexcept -> void {
         tensor_base_op
@@ -324,6 +375,6 @@ namespace rtml::blas {
     }
 
     auto t_f32_matmul(const compute_ctx& ctx, tensor<>& r, const tensor<>& x, const tensor<>& y) noexcept -> void {
-        blas_tensor_sgemm(ctx, r, x, y);
+        blas_tensor_sgemm_naive(ctx, r, x, y);
     }
 }

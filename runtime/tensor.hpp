@@ -170,10 +170,10 @@ namespace rtml {
         [[nodiscard]] auto operator()(const std::array<dim, k_max_dims>& indices) const noexcept -> T& {
             return *reinterpret_cast<T*>(
                 m_x.u8 +
-                indices[3]*m_strides[3] +
-                indices[2]*m_strides[2] +
+                indices[0]*m_strides[0] +
                 indices[1]*m_strides[1] +
-                indices[0]*m_strides[0]
+                indices[2]*m_strides[2] +
+                indices[3]*m_strides[3]
             );
         }
         [[nodiscard]] auto operator()(const dim i) const noexcept -> T& {
