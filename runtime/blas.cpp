@@ -248,7 +248,6 @@ namespace rtml::blas {
      *  - Matrix B with dimensions [k, m] is internally considered to be transposed,
      *  - The result of the multiplication is Matrix C with dimensions [n, m], resulting from the conventional matrix product of A and the transpose of B.
      */
-#if 0
     static auto RTML_AINLINE RTML_HOT blas_tensor_sgemm_tranposed(
         const compute_ctx& ctx,
         tensor<>& r,       // result
@@ -336,7 +335,6 @@ namespace rtml::blas {
             }
         }
     }
-#endif
 
     auto blas::t_f32_add(const compute_ctx& ctx, tensor<dtypes::f32>& r, const tensor<dtypes::f32>& x, const tensor<dtypes::f32>& y) noexcept -> void {
         tensor_base_op
@@ -376,5 +374,6 @@ namespace rtml::blas {
 
     auto t_f32_matmul(const compute_ctx& ctx, tensor<>& r, const tensor<>& x, const tensor<>& y) noexcept -> void {
         blas_tensor_sgemm_naive(ctx, r, x, y);
+        //blas_tensor_sgemm_tranposed(ctx, r, x, y);
     }
 }

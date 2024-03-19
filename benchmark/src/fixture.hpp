@@ -12,7 +12,7 @@ using namespace rtml;
 
 class rtml_fixture : public benchmark::Fixture {
 public:
-    static constexpr dim k_shape {128};
+    static constexpr dim k_shape {64};
     static constexpr std::array<dim, tensor<>::k_max_dims> k_shapes {
         k_shape,
         k_shape>>1,

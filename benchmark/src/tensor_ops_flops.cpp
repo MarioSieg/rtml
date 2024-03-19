@@ -26,3 +26,8 @@ BENCHMARK_F(rtml_fixture, tensor_div)(benchmark::State& st) {
     }
 }
 
+BENCHMARK_F(rtml_fixture, tensor_matmul)(benchmark::State& st) {
+    for (auto _ : st) {
+        blas::t_f32_matmul(cctx, *c, *a, *b);
+    }
+}
