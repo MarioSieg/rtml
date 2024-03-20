@@ -10,7 +10,6 @@
 #include <span>
 
 #include "fixed_vector.hpp"
-#include "graph.hpp"
 #include "tensor_base.hpp"
 #include "isolate.hpp"
 

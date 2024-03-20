@@ -1,4 +1,6 @@
 // Copyright Mario "Neo" Sieg 2024. All rights reserved. mario.sieg.64@gmail.com
+// Isolates represent a single isolated contexts with their own memory pool, which can be used to allocate tensors
+// Tensors are alive as long as the isolate they got allocated from is alive
 
 #pragma once
 
@@ -11,6 +13,7 @@ namespace rtml {
         requires std::is_trivially_destructible_v<T>;
     };
 
+    // Sequencial linear pool allocator with fixed size
     class pool final {
     public:
         explicit pool(std::size_t size);
@@ -47,16 +50,10 @@ namespace rtml {
         std::size_t m_num_allocs {};
     };
 
-    constexpr auto operator ""_kib(const unsigned long long int x) -> unsigned long long int  {
-        return x << 10;
-    }
-    constexpr auto operator ""_mib(const unsigned long long int x) -> unsigned long long int  {
-        return x << 20;
-    }
-    constexpr auto operator ""_gib(const unsigned long long int x) -> unsigned long long int  {
-        return x << 30;
-    }
-
+    // Represents a single isolated context with its own memory pool, which can be used to allocate tensors
+    // Tensors are alive as long as the isolate is alive
+    // So the isolate should be kept alive as long as the tensors are used
+    // TODO: Automatic memory management for tensors lol
     class isolate : public std::enable_shared_from_this<isolate> {
     public:
         enum class compute_device : std::uint32_t {
