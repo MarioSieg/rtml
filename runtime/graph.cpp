@@ -5,8 +5,6 @@
 #include "tensor.hpp"
 #include "blas.hpp"
 
-#if 0
-
 namespace rtml::graph {
     [[nodiscard]] static constexpr auto validate_unary_op(const tensor* const dst, const std::span<const tensor*> src) -> bool {
         const tensor* const r {dst};
@@ -156,5 +154,3 @@ namespace rtml::graph {
         callback(root);
     }
 }
-
-#endif
