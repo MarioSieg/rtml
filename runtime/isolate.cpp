@@ -1,4 +1,6 @@
 // Copyright Mario "Neo" Sieg 2024. All rights reserved. mario.sieg.64@gmail.com
+// Isolates represent a single isolated contexts with their own memory pool, which can be used to allocate tensors
+// Tensors are alive as long as the isolate they got allocated from is alive
 
 #include "isolate.hpp"
 

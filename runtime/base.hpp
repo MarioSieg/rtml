@@ -42,6 +42,16 @@
 
 namespace rtml {
     [[noreturn]] extern auto RTML_COLD panic(std::string_view msg) -> void;
+
+    constexpr auto operator ""_kib(const unsigned long long int x) noexcept -> unsigned long long int  {
+        return x << 10;
+    }
+    constexpr auto operator ""_mib(const unsigned long long int x) noexcept -> unsigned long long int  {
+        return x << 20;
+    }
+    constexpr auto operator ""_gib(const unsigned long long int x) noexcept -> unsigned long long int  {
+        return x << 30;
+    }
 }
 
 // Assert for debug and release builds.

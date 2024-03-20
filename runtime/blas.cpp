@@ -1,17 +1,19 @@
 // Copyright Mario "Neo" Sieg 2024. All rights reserved. mario.sieg.64@gmail.com
+// CPU backend only!
 // BLAS (basic linear algebra subprograms) for RTML (runtime machine learning) library
 // Implements core tensor operations (which are not strictly BLAS routines) and some basic linear algebra operations
+// Remember: Sparse means non-contiguous memory layout
 
 #include <algorithm>
 #include <cmath>
 
 #include "blas.hpp"
-#include "blas.hpp"
 #include "isolate.hpp"
 #include "tensor.hpp"
 
 namespace rtml::blas {
-    namespace scalar {
+    namespace scalar { // These are needed to implement the generic tensor operations with vector (for dense) and scalar (for sparse) kernels
+        // TODO: optimize with SIMD and dynamic CPU detection for x86-64: AVX512, AVX2, FMA, SSE and ARM: NEON (SVE in the future?)
         template <typename S> requires is_dtype<S>
         [[nodiscard]] static constexpr auto RTML_AINLINE RTML_HOT add(const S x, const S y) noexcept -> S { return x + y; }
         template <typename S> requires is_dtype<S>
@@ -23,8 +25,10 @@ namespace rtml::blas {
     }
 
     namespace vec {
+        // TODO: optimize with SIMD and dynamic CPU detection for x86-64: AVX512, AVX2, FMA, SSE and ARM: NEON (SVE in the future?)
+        // TODO: optimize with polynomial approximation for tanh, sigmoid, relu, gelu, silu
         static constexpr float k_rtml_sqrt2pi {0.79788456080286535587989211986876f}; // sqrt(2/PI)
-        static constexpr float k_rtml_gelu_coeff {0.044715f};
+        static constexpr float k_rtml_gelu_coeff {0.044715f}; // GeLU coefficient
 
         template <typename S> requires is_dtype<S>
         static auto RTML_HOT softmax(const std::size_t n, S* const ov, const S* const x) noexcept -> void {
@@ -102,9 +106,10 @@ namespace rtml::blas {
         sparse
     };
 
+    // Generic tensor binary operation like +, -, *, /
     template <const kernel_density density, typename S, typename V_OP, typename S_OP>
         requires is_dtype<S> && is_vector_op<V_OP, S> && is_scalar_op<S_OP, S>
-    static auto RTML_AINLINE RTML_HOT blas_tensor_generic_op(
+    static auto RTML_AINLINE RTML_HOT blas_tensor_gen_op_binary_kernel(
         const compute_ctx& ctx,
         tensor<S>& r,       // result
         const tensor<S>& x, // X = src 0
@@ -160,9 +165,10 @@ namespace rtml::blas {
         }
     }
 
+    // Wrapper for generic tensor binary operation like +, -, *, / which dispatches to dense or sparse kernel
     template <typename S, typename V_OP, typename S_OP>
         requires is_dtype<S> && is_vector_op<V_OP, S> && is_scalar_op<S_OP, S>
-    static auto RTML_AINLINE RTML_HOT tensor_base_op(
+    static auto RTML_AINLINE RTML_HOT blas_tensor_gen_op_binary(
         const compute_ctx& ctx,
         tensor<S>& r,
         const tensor<S>& x,
@@ -170,8 +176,8 @@ namespace rtml::blas {
         V_OP&& v_op,        // Vector OP
         S_OP&& s_op         // Scalar OP
     ) noexcept -> void {
-        if (y.strides()[0] == dtype_traits<S>::k_size) { // Sparse or dense kernel?
-            blas_tensor_generic_op<kernel_density::dense, S, V_OP, S_OP>(
+        if (y.strides()[0] == dtype_traits<S>::k_size) { // Dense or sparse kernel? Sparse means non-contiguous memory layout
+            blas_tensor_gen_op_binary_kernel<kernel_density::dense, S, V_OP, S_OP>(
                 ctx,
                 r,
                 x,
@@ -180,7 +186,7 @@ namespace rtml::blas {
                 s_op
             );
         } else {
-            blas_tensor_generic_op<kernel_density::sparse, S, V_OP, S_OP>(
+            blas_tensor_gen_op_binary_kernel<kernel_density::sparse, S, V_OP, S_OP>(
                 ctx,
                 r,
                 x,
@@ -193,6 +199,11 @@ namespace rtml::blas {
 
     /*
      * BLAS SGEMM (Single precision General Matrix Multiply)
+     * Compute the matrix product of two matrices X and Y: R = X @ Y
+     * TODO: This is a naive implementation and not optimized.
+     * TODO: Thread partitioning
+     * TODO: optimize for cache efficiency and SIMD (use vec::dot)
+     * TODO: Handle broadcasting
      */
     static auto RTML_AINLINE RTML_HOT blas_tensor_sgemm_naive(
         const compute_ctx& ctx,
@@ -240,13 +251,12 @@ namespace rtml::blas {
     }
 
     /*
-     * This version is faster but computes transposed result and y.
-     * BLAS SGEMM (Single precision General Matrix Multiply)
-     *
-     * Input:
-     *  - Matrix A with dimensions [n, k] is represented as a tensor with shape [Dim3, Dim2, n, k].
-     *  - Matrix B with dimensions [k, m] is internally considered to be transposed,
-     *  - The result of the multiplication is Matrix C with dimensions [n, m], resulting from the conventional matrix product of A and the transpose of B.
+     * BLAS SGEMM (Single precision General Matrix Multiply), but a modified version.
+     * Compute the matrix product of two matrices X and Y: R_T = X @ Y_T
+     * This version is optimized for cache efficiency and SIMD (use vec::dot) BUT it tranposes Y and the result.
+     * This allows for row-by-row processing which is cache efficient and SIMD friendly but different from the original SGEMM.
+     * TODO: Use this version if it makes sense (e.g. if Y is transposed and the result is transposed).
+     * TODO: Comments
      */
     static auto RTML_AINLINE RTML_HOT blas_tensor_sgemm_tranposed(
         const compute_ctx& ctx,
@@ -336,8 +346,8 @@ namespace rtml::blas {
         }
     }
 
-    auto blas::t_f32_add(const compute_ctx& ctx, tensor<dtypes::f32>& r, const tensor<dtypes::f32>& x, const tensor<dtypes::f32>& y) noexcept -> void {
-        tensor_base_op
+    auto blas::add(const compute_ctx& ctx, tensor<dtypes::f32>& r, const tensor<dtypes::f32>& x, const tensor<dtypes::f32>& y) noexcept -> void {
+        blas_tensor_gen_op_binary
         <
             std::decay_t<decltype(r)>::dtype,
             decltype(vec::add<std::decay_t<decltype(r)>::dtype>),
@@ -345,8 +355,8 @@ namespace rtml::blas {
         >(ctx, r, x, y, vec::add, scalar::add);
     }
 
-    auto blas::t_f32_sub(const compute_ctx& ctx, tensor<dtypes::f32>& r, const tensor<dtypes::f32>& x, const tensor<dtypes::f32>& y) noexcept -> void {
-        tensor_base_op
+    auto blas::sub(const compute_ctx& ctx, tensor<dtypes::f32>& r, const tensor<dtypes::f32>& x, const tensor<dtypes::f32>& y) noexcept -> void {
+        blas_tensor_gen_op_binary
         <
             std::decay_t<decltype(r)>::dtype,
             decltype(vec::sub<std::decay_t<decltype(r)>::dtype>),
@@ -354,8 +364,8 @@ namespace rtml::blas {
         >(ctx, r, x, y, vec::sub, scalar::sub);
     }
 
-    auto blas::t_f32_mul(const compute_ctx& ctx, tensor<dtypes::f32>& r, const tensor<dtypes::f32>& x, const tensor<dtypes::f32>& y) noexcept -> void {
-        tensor_base_op
+    auto blas::mul(const compute_ctx& ctx, tensor<dtypes::f32>& r, const tensor<dtypes::f32>& x, const tensor<dtypes::f32>& y) noexcept -> void {
+        blas_tensor_gen_op_binary
         <
             std::decay_t<decltype(r)>::dtype,
             decltype(vec::mul<std::decay_t<decltype(r)>::dtype>),
@@ -363,8 +373,8 @@ namespace rtml::blas {
         >(ctx, r, x, y, vec::mul, scalar::mul);
     }
 
-    auto blas::t_f32_div(const compute_ctx& ctx, tensor<dtypes::f32>& r, const tensor<dtypes::f32>& x, const tensor<dtypes::f32>& y) noexcept -> void {
-        tensor_base_op
+    auto blas::div(const compute_ctx& ctx, tensor<dtypes::f32>& r, const tensor<dtypes::f32>& x, const tensor<dtypes::f32>& y) noexcept -> void {
+        blas_tensor_gen_op_binary
         <
             std::decay_t<decltype(r)>::dtype,
             decltype(vec::div<std::decay_t<decltype(r)>::dtype>),
@@ -372,8 +382,9 @@ namespace rtml::blas {
         >(ctx, r, x, y, vec::div, scalar::div);
     }
 
-    auto t_f32_matmul(const compute_ctx& ctx, tensor<>& r, const tensor<>& x, const tensor<>& y) noexcept -> void {
+    auto matmul(const compute_ctx& ctx, tensor<>& r, const tensor<>& x, const tensor<>& y) noexcept -> void {
         blas_tensor_sgemm_naive(ctx, r, x, y);
+        // TODO - Use this version if it makes sense
         //blas_tensor_sgemm_tranposed(ctx, r, x, y);
     }
 }

@@ -10,7 +10,6 @@
 #include <span>
 
 #include "fixed_vector.hpp"
-#include "graph.hpp"
 #include "tensor_base.hpp"
 #include "isolate.hpp"
 
@@ -71,14 +70,14 @@ namespace rtml {
             m_strides[2] == m_strides[1] * m_shape[1] &&
             m_strides[3] == m_strides[2] * m_shape[2];
         }
-        [[nodiscard]] auto is_shape_eq(const tensor* other) const noexcept -> bool {
+        [[nodiscard]] auto is_shape_eq(const tensor* const other) const noexcept -> bool {
             if (this == other) [[unlikely]]
            return true;
             if (m_num_dims == other->m_num_dims) [[likely]]
                 return std::equal(m_shape.cbegin(), m_shape.cbegin()+m_num_dims, other->m_shape.cbegin());
             return false;
         }
-        [[nodiscard]] auto is_matmul_compatible(const tensor* other) const noexcept -> bool {
+        [[nodiscard]] auto is_matmul_compatible(const tensor* const other) const noexcept -> bool {
             static_assert(k_max_dims == 4);
             return m_shape[0] == other->m_shape[0] && // Check if matrix multiplication is compatible
                 other->m_shape[2] % m_shape[2] == 0 &&
@@ -95,7 +94,7 @@ namespace rtml {
                 m_strides[1] > m_strides[2] ||
                 m_strides[2] > m_strides[3];
         }
-        [[nodiscard]] auto can_repeat(const tensor* other) const noexcept -> bool {
+        [[nodiscard]] auto can_repeat(const tensor* const other) const noexcept -> bool {
             static_assert(k_max_dims == 4);
             return
                 other->m_shape[0] % m_shape[0] == 0 && // Check if other's dimensions are divisible by this tensor's dimensions
@@ -112,7 +111,7 @@ namespace rtml {
             static_assert(k_max_dims == 4);
             return m_shape[0] * m_shape[1] * m_shape[2] * m_shape[3];
         }
-        [[nodiscard]] auto unroll_index(dim i) const noexcept -> std::array<dim, k_max_dims> {
+        [[nodiscard]] auto unroll_index(const dim i) const noexcept -> std::array<dim, k_max_dims> {
             static_assert(k_max_dims == 4);
             const dim d0 {m_shape[0]};
             const dim d1 {m_shape[1]};
@@ -190,7 +189,7 @@ namespace rtml {
             const std::string formatted {fmt::format(fmt, std::forward<Args>(args)...)}; // TODO: avoid clone
             set_name(formatted.c_str());
         }
-        [[nodiscard]] auto RTML_COLD to_string(std::size_t with_data_elems = 0) const -> std::string {
+        [[nodiscard]] auto RTML_COLD to_string(const std::size_t with_data_elems = 0) const -> std::string {
             static_assert(k_max_dims == 4);
             const std::size_t total_size = m_datasize+sizeof(*this);
             auto size {static_cast<double>(total_size)};

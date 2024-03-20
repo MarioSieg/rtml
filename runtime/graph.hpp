@@ -26,20 +26,20 @@ namespace rtml::graph {
         _(matmul, 2, "matmul")__
 
     #define _(mnemonic, operands, name) mnemonic
-    enum opcode : std::uint32_t {
+    enum class opcode : std::uint32_t {
         rtml_opcode_def(_, rtml_co)
         $count
     };
     #undef _
 
     #define _(mnemonic, operands, name) ((operands)&0xff)
-    constexpr std::array<std::uint32_t, $count> k_operands {
+    constexpr std::array<std::uint32_t, static_cast<std::size_t>(opcode::$count)> k_operands {
         rtml_opcode_def(_, rtml_co)
     };
     #undef _
 
     #define _(mnemonic, operands, name) name
-    constexpr std::array<std::string_view, $count> k_names {
+    constexpr std::array<std::string_view, static_cast<std::size_t>(opcode::$count)> k_names {
         rtml_opcode_def(_, rtml_co)
     };
     #undef _
@@ -153,15 +153,15 @@ namespace rtml::graph {
         }
     }
 
-    template <typename S> requires is_dtype<S>;
+    template <typename S> requires is_dtype<S>
     struct routines;
 
     template <>
-    struct routines final {
-        static constexpr std::array<validate_function<dtypes::f32>*, $count> validators {
+    struct routines<dtypes::f32> {
+        static constexpr std::array<validate_function<dtypes::f32>*, static_cast<std::size_t>(opcode::$count)> validators {
             [] consteval { // Autogenerate table of validation functions for unary and binary ops
-                std::array<validate_function<dtypes::f32>*, $count> result {};
-                for (std::size_t i {}; i < $count; ++i) {
+                std::array<validate_function<dtypes::f32>*, static_cast<std::size_t>(opcode::$count)> result {};
+                for (std::size_t i {}; i < static_cast<std::size_t>(opcode::$count); ++i) {
                     if (k_operands[i] == 1) { // unary op
                         result[i] = &validators::validate_unary_op<dtypes::f32>;
                     } else { // binary op
@@ -171,7 +171,7 @@ namespace rtml::graph {
                 return result;
             }()
         };
-        static constexpr std::array<eval_function<dtypes::f32>*, $count> evaluators {
+        static constexpr std::array<eval_function<dtypes::f32>*, static_cast<std::size_t>(opcode::$count)> evaluators {
 
         };
     };
