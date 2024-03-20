@@ -9,3 +9,10 @@ install_manifest.txt
 compile_commands.json
 CTestTestfile.cmake
 _deps
+.idea/
+bin/
+python/.venv/
+python/.idea
+python/build/
+python/__pycache__/
+benchmark.csv
