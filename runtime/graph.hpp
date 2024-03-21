@@ -54,19 +54,19 @@ namespace rtml::graph {
         right_to_left
     };
 
-    template <const graph_eval_order order, typename S, typename F, typename... Args>
+    template <const graph_eval_order Ord, typename S, typename F, typename... Args>
         requires is_dtype<S> && std::is_invocable_r_v<void, const tensor<S>*, Args...>
     auto graph_visit(
         const tensor<S>* root,
         F&& callback,
         Args&&... args
     ) -> void {
-        const auto& operands {root->operands()};
+        auto&& operands {root->operands()};
         for (std::size_t i {}; i < operands.size(); ++i) {
             std::size_t ii;
-            if constexpr (order == graph_eval_order::left_to_right) ii = i;
+            if constexpr (Ord == graph_eval_order::left_to_right) ii = i;
             else ii = operands.size() - i - 1;
-            graph_visit(operands[ii], order, std::forward<F>(callback), std::forward<Args>(args)...);
+            graph_visit(operands[ii], std::forward<F>(callback), std::forward<Args>(args)...);
         }
         std::invoke(callback, root, std::forward<Args>(args)...);
     }
@@ -74,82 +74,51 @@ namespace rtml::graph {
     // all validation functions go here
     namespace validators {
         template <typename S> requires is_dtype<S>
-        [[nodiscard]] constexpr auto validate_unary_op(
-            const tensor<S>* const dst,
+        [[nodiscard]] constexpr auto validate_unary_op( // TODO: print problems
+            const tensor<S>* const r,
             const std::span<const tensor<S>*> src
         ) -> bool {
-            const tensor<S>* const r {dst};
-            if (!r) [[unlikely]] {
-                return false;
-            }
-            if (const auto num {static_cast<std::size_t>(r->opcode())}; k_operands[num] != src.size() && src.size() == 1) [[unlikely]] {
-                rtml_log_error("Operand count mismatch, expected {}, got {}", num, src.size());
-                return false;
-            }
-            const tensor<S>* const x {src[0]};
-            if (!x) [[unlikely]] {
-                return false;
-            }
-            if (!x->is_dense_except_dim1()) [[unlikely]] {
-                return false;
-            }
-            if (!r->is_dense_except_dim1()) [[unlikely]] {
-                return false;
-            }
-            if (r->is_shape_eq(x)) [[unlikely]] {
-                return false;
-            }
+            if (!r) [[unlikely]] return false;
+            const auto num_operands {static_cast<std::size_t>(r->opcode())};
+            if (k_operands[num_operands] != src.size()) [[unlikely]] return false;
+            if (!src[0]) [[unlikely]] return false;
+            if (!src[0]->is_dense_except_dim1()) [[unlikely]] return false;
+            if (!r->is_dense_except_dim1()) [[unlikely]] return false;
+            if (r->is_shape_eq(src[0])) [[unlikely]] return false;
             return true;
         }
 
         template <typename S> requires is_dtype<S>
-        [[nodiscard]] constexpr auto validate_binary_op(
-            const tensor<S>* const dst,
+        [[nodiscard]] constexpr auto validate_binary_op( // TODO: print problems
+            const tensor<S>* const r,
             const std::span<const tensor<S>*> src
         ) -> bool {
-            const tensor<S>* const r {dst};
-            if (!r) [[unlikely]] {
-                return false;
-            }
-            if (const auto num {static_cast<std::size_t>(r->opcode())}; k_operands[num] != src.size() && src.size() == 2) [[unlikely]] {
-                rtml_log_error("Operand count mismatch, expected {}, got {}", num, src.size());
-                return false;
-            }
-            const tensor<S>* const x {src[0]};
-            const tensor<S>* const y {src[1]};
-            if (!x || !y) [[unlikely]] {
-                return false;
-            }
-            if (x->strides()[0] != sizeof(float)) [[unlikely]] {
-                return false;
-            }
-            if (r->strides()[0] != sizeof(float)) [[unlikely]] {
-                return false;
-            }
-            if (!y->can_repeat(x)) [[unlikely]] {
-                return false;
-            }
-            if (!x->is_shape_eq(r)) [[unlikely]] {
-                return false;
-            }
+            if (!r) [[unlikely]] return false;
+            const auto num_operands {static_cast<std::size_t>(r->opcode())};
+            if (k_operands[num_operands] != src.size()) [[unlikely]] return false;
+            if (!src[0] || !src[1]) [[unlikely]] return false;
+            if (src[0]->strides()[0] != dtype_traits<S>::k_size) [[unlikely]] return false;
+            if (r->strides()[0] != dtype_traits<S>::k_size) [[unlikely]] return false;
+            if (!src[1]->can_repeat(src[0])) [[unlikely]] return false;
+            if (!src[0]->is_shape_eq(r)) [[unlikely]] return false;
             return true;
         }
     }
 
     namespace evaluators {
         template <typename S> requires is_dtype<S>
-        constexpr auto evaluate_unary_op(
-            const tensor<S>* const dst,
+        constexpr auto RTML_HOT evaluate_unary_op(
+            const tensor<S>* const r,
             const std::span<const tensor<S>*> src
         ) -> void {
-
+            // todo
         }
         template <typename S> requires is_dtype<S>
-        constexpr auto evaluate_binary_op(
-            const tensor<S>* const dst,
+        constexpr auto RTML_HOT evaluate_binary_op(
+            const tensor<S>* const r,
             const std::span<const tensor<S>*> src
         ) -> void {
-
+            // todo
         }
     }
 
@@ -159,7 +128,7 @@ namespace rtml::graph {
     template <>
     struct routines<dtypes::f32> {
         static constexpr std::array<validate_function<dtypes::f32>*, static_cast<std::size_t>(opcode::$count)> validators {
-            [] consteval { // Autogenerate table of validation functions for unary and binary ops
+            [] consteval -> auto { // Autogenerate table of validation functions for unary and binary ops
                 std::array<validate_function<dtypes::f32>*, static_cast<std::size_t>(opcode::$count)> result {};
                 for (std::size_t i {}; i < static_cast<std::size_t>(opcode::$count); ++i) {
                     if (k_operands[i] == 1) { // unary op
