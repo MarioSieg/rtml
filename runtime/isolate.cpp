@@ -13,11 +13,9 @@
 
 namespace rtml {
     pool::pool(const std::size_t size) : m_size{size} {
-        if (!size) [[unlikely]]
-            std::abort();
+        rtml_assert(size > 0, "Pool size must be greater than 0");
         m_buf = static_cast<std::uint8_t*>(std::malloc(size)); // Malloc to avoid initialization of memory and to use lazy mapping
-        if (!m_buf) [[unlikely]]
-            std::abort();
+        rtml_assert(m_buf != nullptr, "Failed to allocate memory pool of size {}", size);
         rtml_log_info("Created linear memory pool of size {:.01f} MiB", static_cast<double>(size)/std::pow(1024.0, 2.0));
         m_bot = m_buf + size;
     }
@@ -28,8 +26,7 @@ namespace rtml {
 
     auto pool::alloc_raw(const std::size_t size) noexcept -> void* {
         m_bot -= size;
-        if (m_bot < m_buf) [[unlikely]]
-            std::abort();
+        rtml_assert(m_bot >= m_buf, "Pool out of memory, requested size: {}", size);
         ++m_num_allocs;
         return m_bot;
     }

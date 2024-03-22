@@ -117,8 +117,6 @@ namespace rtml::blas {
         V_OP&& v_op,        // Vector OP
         S_OP&& s_op         // Scalar OP
     ) noexcept -> void {
-        assert(y.can_repeat(&x));                                       // Debug only verification - ! must be checked by validation function
-        assert(x.is_shape_eq(&r));                                      // Debug only verification - ! must be checked by validation function
         std::uint8_t* const b_r {r.ptr()};                              // Data base ptr
         const std::uint8_t* const b_x {x.ptr()};                        // Data base ptr
         const std::uint8_t* const b_y {y.ptr()};                        // Data base ptr
@@ -212,8 +210,6 @@ namespace rtml::blas {
         const tensor<>& y  // Y = src 1
     ) noexcept -> void {
         static_assert(std::is_same_v<std::decay_t<decltype(r)>::dtype, dtypes::f32>);
-        assert(x.is_matmul_compatible(&y));
-        assert(!x.is_transposed());
         static constexpr dim block_x {16};
         static constexpr dim block_y {16};
         static_assert(block_x == block_y);
@@ -265,8 +261,6 @@ namespace rtml::blas {
         const tensor<>& y  // Y = src 1
     ) noexcept -> void {
         static_assert(std::is_same_v<std::decay_t<decltype(r)>::dtype, dtypes::f32>);
-        assert(x.is_matmul_compatible(&y));
-        assert(!x.is_transposed());
         static constexpr dim block_x {16};
         static constexpr dim block_y {16};
         static_assert(block_x == block_y);
@@ -282,18 +276,6 @@ namespace rtml::blas {
         const dim tidx {ctx.thread_idx};                                // Current thread index
         const dim tc {ctx.num_threads};                                 // Current thread count
         const bool y_dense {y.is_dense()};
-        assert(r_d0 == x_d1);
-        assert(r_d1 == y_d1);
-        assert(r_d2 == y_d2);
-        assert(r_d3 == y_d3);
-        assert(x_s0 == dtype_traits<dtypes::f32>::k_size);
-        assert(y_s0 == dtype_traits<dtypes::f32>::k_size);
-        assert(r_s0 == dtype_traits<dtypes::f32>::k_size);
-        assert(r_s0 <= r_s1);
-        assert(r_s1 <= r_s2);
-        assert(r_s2 <= r_s3);
-        assert(y_d2 % x_d2 == 0);
-        assert(y_d3 % x_d3 == 0);
         const dim r2 {y_d2/x_d2};
         const dim r3 {y_d3/x_d3};
         const dim row_size {y_d0*static_cast<dim>(dtype_traits<dtypes::f32>::k_size)};

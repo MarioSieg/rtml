@@ -59,3 +59,10 @@ namespace rtml {
     if (!(expr)) [[unlikely]] { \
         ::rtml::panic(::fmt::format("{}:{} Assertion failed: " #expr "\t<-\t" msg, __FILE__, __LINE__, ## __VA_ARGS__)); \
     }
+
+// Assert for debug builds only.
+#if defined(NDEBUG)
+#    define rtml_dassert(expr, msg, ...)
+#else
+#    define rtml_dassert(expr, msg, ...) rtml_assert(expr, msg, ## __VA_ARGS__)
+#endif

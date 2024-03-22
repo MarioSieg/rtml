@@ -7,6 +7,8 @@
 #include <span>
 #include <type_traits>
 
+#include "base.hpp"
+
 namespace rtml {
     template <typename T, const std::size_t N>
     class fixed_vector final {
@@ -70,19 +72,19 @@ namespace rtml {
             return reinterpret_cast<const T&>(m_storage[sizeof(T)*index]);
         }
         [[nodiscard]] auto front() noexcept -> reference {
-            if (empty()) [[unlikely]] std::abort();
+            rtml_dassert(!empty(), "empty vector");
             return (*this)[0];
         }
         [[nodiscard]] auto front() const noexcept -> const_reference {
-            if (empty()) [[unlikely]] std::abort();
+            rtml_dassert(!empty(), "empty vector");
             return (*this)[0];
         }
         [[nodiscard]] auto back() noexcept -> reference {
-            if (empty()) [[unlikely]] std::abort();
+            rtml_dassert(!empty(), "empty vector");
             return (*this)[m_len-1];
         }
         [[nodiscard]] auto back() const noexcept -> const_reference {
-            if (empty()) [[unlikely]] std::abort();
+            rtml_dassert(!empty(), "empty vector");
             return (*this)[m_len-1];
         }
         [[nodiscard]] auto data() noexcept -> pointer { return reinterpret_cast<T*>(m_storage.data()); }
@@ -93,7 +95,7 @@ namespace rtml {
         [[nodiscard]] static auto capacity() noexcept -> std::size_t { return N; }
         template <typename... Args> requires std::is_constructible_v<T, Args...>
         auto emplace_back(Args&&... args) noexcept(std::is_nothrow_constructible_v<T, Args...>) -> reference {
-            if (m_len >= N) [[unlikely]] std::abort();
+            rtml_assert(m_len < N, "vector full: {}", N);
             return *new(reinterpret_cast<T*>(m_storage.data()+sizeof(T)*m_len++)) T{std::forward<Args>(args)...};
         }
         operator std::span<T, std::dynamic_extent> () noexcept {
