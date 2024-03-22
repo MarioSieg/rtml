@@ -60,9 +60,13 @@ namespace rtml {
         ::rtml::panic(::fmt::format("{}:{} Assertion failed: " #expr "\t<-\t" msg, __FILE__, __LINE__, ## __VA_ARGS__)); \
     }
 
+#define rtml_assert1(expr) rtml_assert(expr, "")
+
 // Assert for debug builds only.
 #if defined(NDEBUG)
 #    define rtml_dassert(expr, msg, ...)
+#    define rtml_dassert1(expr)
 #else
 #    define rtml_dassert(expr, msg, ...) rtml_assert(expr, msg, ## __VA_ARGS__)
+#    define rtml_dassert1(expr) rtml_assert1(expr)
 #endif

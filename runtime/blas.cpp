@@ -117,6 +117,8 @@ namespace rtml::blas {
         V_OP&& v_op,        // Vector OP
         S_OP&& s_op         // Scalar OP
     ) noexcept -> void {
+        rtml_dassert1(y.can_repeat(&x));                                       // Debug only verification - ! must be checked by validation function
+        rtml_dassert1(x.is_shape_eq(&r));                                      // Debug only verification - ! must be checked by validation function
         std::uint8_t* const b_r {r.ptr()};                              // Data base ptr
         const std::uint8_t* const b_x {x.ptr()};                        // Data base ptr
         const std::uint8_t* const b_y {y.ptr()};                        // Data base ptr
@@ -195,6 +197,32 @@ namespace rtml::blas {
         }
     }
 
+    // Wrapper for generic unary binary operation like softmax, tanh etc..
+    template <typename S, typename V_OP>
+        requires is_dtype<S> && is_vector_op<V_OP, S>
+    static auto RTML_AINLINE RTML_HOT blas_tensor_gen_op_unary(
+        const compute_ctx& ctx,
+        tensor<S>& r,
+        const tensor<S>& x,
+        V_OP&& v_op // Vector OP
+    ) noexcept -> void {
+        rtml_dassert1(ctx.thread_idx == 0);
+        rtml_dassert1(x.is_shape_eq(&r)); // no broadcasting support
+        rtml_dassert1(r.strides()[0] == dtype_traits<S>::k_size);
+        rtml_dassert1(x.strides()[0] == dtype_traits<S>::k_size);
+        const dim rows {x.row_count()};
+        const dim cols {x.col_count()};
+        const dim r_s1 {r.strides()[1]};
+        const dim x_s1 {x.strides()[1]};
+        for (dim i {}; i < rows; ++i) {
+            v_op(
+                cols,
+                reinterpret_cast<S*>(r.ptr() + i*r_s1),
+                reinterpret_cast<const S*>(x.ptr() + i*x_s1)
+            );
+        }
+    }
+
     /*
      * BLAS SGEMM (Single precision General Matrix Multiply)
      * Compute the matrix product of two matrices X and Y: R = X @ Y
@@ -210,6 +238,8 @@ namespace rtml::blas {
         const tensor<>& y  // Y = src 1
     ) noexcept -> void {
         static_assert(std::is_same_v<std::decay_t<decltype(r)>::dtype, dtypes::f32>);
+        rtml_dassert1(x.is_matmul_compatible(&y));
+        rtml_dassert1(!x.is_transposed());
         static constexpr dim block_x {16};
         static constexpr dim block_y {16};
         static_assert(block_x == block_y);
@@ -261,6 +291,8 @@ namespace rtml::blas {
         const tensor<>& y  // Y = src 1
     ) noexcept -> void {
         static_assert(std::is_same_v<std::decay_t<decltype(r)>::dtype, dtypes::f32>);
+        rtml_dassert1(x.is_matmul_compatible(&y));
+        rtml_dassert1(!x.is_transposed());
         static constexpr dim block_x {16};
         static constexpr dim block_y {16};
         static_assert(block_x == block_y);
@@ -276,6 +308,18 @@ namespace rtml::blas {
         const dim tidx {ctx.thread_idx};                                // Current thread index
         const dim tc {ctx.num_threads};                                 // Current thread count
         const bool y_dense {y.is_dense()};
+        rtml_dassert1(r_d0 == x_d1);
+        rtml_dassert1(r_d1 == y_d1);
+        rtml_dassert1(r_d2 == y_d2);
+        rtml_dassert1(r_d3 == y_d3);
+        rtml_dassert1(x_s0 == dtype_traits<dtypes::f32>::k_size);
+        rtml_dassert1(y_s0 == dtype_traits<dtypes::f32>::k_size);
+        rtml_dassert1(r_s0 == dtype_traits<dtypes::f32>::k_size);
+        rtml_dassert1(r_s0 <= r_s1);
+        rtml_dassert1(r_s1 <= r_s2);
+        rtml_dassert1(r_s2 <= r_s3);
+        rtml_dassert1(y_d2 % x_d2 == 0);
+        rtml_dassert1(y_d3 % x_d3 == 0);
         const dim r2 {y_d2/x_d2};
         const dim r3 {y_d3/x_d3};
         const dim row_size {y_d0*static_cast<dim>(dtype_traits<dtypes::f32>::k_size)};
@@ -326,6 +370,54 @@ namespace rtml::blas {
                 );
             }
         }
+    }
+
+    auto softmax(const compute_ctx& ctx, tensor<dtypes::f32>& r, const tensor<dtypes::f32>& x) noexcept -> void {
+        blas_tensor_gen_op_unary
+        <
+            std::decay_t<decltype(r)>::dtype,
+            decltype(vec::softmax<std::decay_t<decltype(r)>::dtype>)
+        >(ctx, r, x, vec::softmax);
+    }
+
+    auto sigmoid(const compute_ctx& ctx, tensor<dtypes::f32>& r, const tensor<dtypes::f32>& x) noexcept -> void {
+        blas_tensor_gen_op_unary
+        <
+            std::decay_t<decltype(r)>::dtype,
+            decltype(vec::sigmoid<std::decay_t<decltype(r)>::dtype>)
+        >(ctx, r, x, vec::sigmoid);
+    }
+
+    auto tanh(const compute_ctx& ctx, tensor<dtypes::f32>& r, const tensor<dtypes::f32>& x) noexcept -> void {
+        blas_tensor_gen_op_unary
+        <
+            std::decay_t<decltype(r)>::dtype,
+            decltype(vec::tanh<std::decay_t<decltype(r)>::dtype>)
+        >(ctx, r, x, vec::tanh);
+    }
+
+    auto relu(const compute_ctx& ctx, tensor<dtypes::f32>& r, const tensor<dtypes::f32>& x) noexcept -> void {
+        blas_tensor_gen_op_unary
+        <
+            std::decay_t<decltype(r)>::dtype,
+            decltype(vec::relu<std::decay_t<decltype(r)>::dtype>)
+        >(ctx, r, x, vec::relu);
+    }
+
+    auto gelu(const compute_ctx& ctx, tensor<dtypes::f32>& r, const tensor<dtypes::f32>& x) noexcept -> void {
+        blas_tensor_gen_op_unary
+        <
+            std::decay_t<decltype(r)>::dtype,
+            decltype(vec::gelu<std::decay_t<decltype(r)>::dtype>)
+        >(ctx, r, x, vec::gelu);
+    }
+
+    auto silu(const compute_ctx& ctx, tensor<dtypes::f32>& r, const tensor<dtypes::f32>& x) noexcept -> void {
+        blas_tensor_gen_op_unary
+        <
+            std::decay_t<decltype(r)>::dtype,
+            decltype(vec::silu<std::decay_t<decltype(r)>::dtype>)
+        >(ctx, r, x, vec::silu);
     }
 
     auto blas::add(const compute_ctx& ctx, tensor<dtypes::f32>& r, const tensor<dtypes::f32>& x, const tensor<dtypes::f32>& y) noexcept -> void {

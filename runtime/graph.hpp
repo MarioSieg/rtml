@@ -5,7 +5,7 @@
 #include <functional>
 #include <span>
 
-#include "tensor_base.hpp"
+#include "blas.hpp"
 
 namespace rtml::graph {
     #define rtml_co ,
@@ -73,36 +73,45 @@ namespace rtml::graph {
 
     // all validation functions go here
     namespace validators {
+        #define rtml_verify(expr, msg, ...) \
+            if (!(expr)) [[unlikely]] { \
+                rtml_log_error("{}:{} Validation failed: " #expr "\t<-\t" msg, __FILE__, __LINE__, ## __VA_ARGS__); \
+                return false; \
+            }
+
         template <typename S> requires is_dtype<S>
-        [[nodiscard]] constexpr auto validate_unary_op( // TODO: print problems
+        [[nodiscard]] constexpr auto validate_unary_op(
             const tensor<S>* const r,
             const std::span<const tensor<S>*> src
         ) -> bool {
-            if (!r) [[unlikely]] return false;
+            rtml_verify(r, "Result tensor is null");
             const auto num_operands {static_cast<std::size_t>(r->opcode())};
-            if (k_operands[num_operands] != src.size()) [[unlikely]] return false;
-            if (!src[0]) [[unlikely]] return false;
-            if (!src[0]->is_dense_except_dim1()) [[unlikely]] return false;
-            if (!r->is_dense_except_dim1()) [[unlikely]] return false;
-            if (r->is_shape_eq(src[0])) [[unlikely]] return false;
+            rtml_verify(k_operands[num_operands] == src.size(), "Number of operands mismatch");
+            rtml_verify(src[0], "Source tensor is null");
+            rtml_verify(src[0]->is_dense_except_dim1(), "Source tensor is not dense except dim1");
+            rtml_verify(r->is_dense_except_dim1(), "Result tensor is not dense except dim1");
+            rtml_verify(r->is_shape_eq(src[0]), "Result tensor shape mismatch");
             return true;
         }
 
         template <typename S> requires is_dtype<S>
-        [[nodiscard]] constexpr auto validate_binary_op( // TODO: print problems
+        [[nodiscard]] constexpr auto validate_binary_op(
             const tensor<S>* const r,
             const std::span<const tensor<S>*> src
         ) -> bool {
-            if (!r) [[unlikely]] return false;
+            rtml_verify(r, "Result tensor is null");
             const auto num_operands {static_cast<std::size_t>(r->opcode())};
-            if (k_operands[num_operands] != src.size()) [[unlikely]] return false;
-            if (!src[0] || !src[1]) [[unlikely]] return false;
-            if (src[0]->strides()[0] != dtype_traits<S>::k_size) [[unlikely]] return false;
-            if (r->strides()[0] != dtype_traits<S>::k_size) [[unlikely]] return false;
-            if (!src[1]->can_repeat(src[0])) [[unlikely]] return false;
-            if (!src[0]->is_shape_eq(r)) [[unlikely]] return false;
+            rtml_verify(k_operands[num_operands] == src.size(), "Number of operands mismatch");
+            rtml_verify(src[0], "Source tensor 0 is null");
+            rtml_verify(src[1], "Source tensor 1 is null");
+            rtml_verify(src[0]->strides()[0] != dtype_traits<S>::k_size, "Source tensor 0 stride mismatch");
+            rtml_verify(r->strides()[0] != dtype_traits<S>::k_size, "Result tensor stride mismatch");
+            rtml_verify(src[1]->can_repeat(src[0]), "Source tensor 1 cannot repeat source tensor 0");
+            rtml_verify(src[0]->is_shape_eq(r), "Source tensor 0 shape mismatch");
             return true;
         }
+
+        #undef rtml_verify
     }
 
     namespace evaluators {
