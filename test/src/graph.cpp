@@ -23,7 +23,7 @@ TEST(graph, eval) {
     auto e {c * c};
     auto f {e - c};
     auto g {f * c};
-    graph::compute<dtypes::f32>(&*g);
+    graph::compute(&*g);
 
     g->print();
 
