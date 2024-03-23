@@ -26,7 +26,7 @@ namespace rtml::graph {
         F&& callback,
         Args&&... args
     ) -> void {
-        if (root->op_code() == opcode::nop) return;
+        if (root->opcode() == opcode::nop) return;
         auto&& operands {root->operands()};
         for (std::size_t i {}; i < operands.size(); ++i) {
             std::size_t ii;
@@ -51,7 +51,7 @@ namespace rtml::graph {
             const std::span<const tensor<S>* const> src
         ) -> bool {
             rtml_verify(r, "Result tensor is null");
-            const auto num_operands {static_cast<std::size_t>(r->op_code())};
+            const auto num_operands {static_cast<std::size_t>(r->opcode())};
             rtml_verify(k_operands[num_operands] == src.size(), "Number of operands mismatch, expected {} got {}", k_operands[num_operands], src.size());
             rtml_verify(src[0], "Source tensor is null");
             rtml_verify(src[0]->is_dense_except_dim1(), "Source tensor is not dense except dim1");
@@ -66,7 +66,7 @@ namespace rtml::graph {
             const std::span<const tensor<S>* const> src
         ) -> bool {
             rtml_verify(r, "Result tensor is null");
-            const auto num_operands {static_cast<std::size_t>(r->op_code())};
+            const auto num_operands {static_cast<std::size_t>(r->opcode())};
             rtml_verify(k_operands[num_operands] == src.size(), "Number of operands mismatch, expected {} got {}", k_operands[num_operands], src.size());
             rtml_verify(src[0], "Source tensor 0 is null");
             rtml_verify(src[1], "Source tensor 1 is null");
@@ -142,7 +142,7 @@ namespace rtml::graph {
     auto RTML_HOT compute(tensor<S>* const root) -> void {
         blas::compute_ctx ctx {};
         graph_visit<graph_eval_order::left_to_right, const tensor<S>>(root, [&ctx](const tensor<S>* const t) noexcept -> void {
-            const auto op_idx {static_cast<std::size_t>(t->op_code())};
+            const auto op_idx {static_cast<std::size_t>(t->opcode())};
             const std::span<const tensor<S>* const> operands {t->operands().data(), t->operands().size()};
             rtml_assert(routines<S>::validators[op_idx](t, operands), "Validation failed");
             routines<S>::evaluators[op_idx](ctx, const_cast<tensor<S>*>(t), operands);
