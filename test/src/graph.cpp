@@ -10,22 +10,24 @@ using namespace rtml;
 
 TEST(graph, eval) {
     auto ctx = isolate::create("test", isolate::compute_device::cpu, 0x1000);
-    tensor<>* a {ctx->new_tensor<dtypes::f32>({4, 4})};
-    tensor<>* b {ctx->new_tensor<dtypes::f32>({4, 4})};
-    tensor<>* c {ctx->new_tensor<dtypes::f32>({4, 4})};
+    tensor_ref a {ctx->new_tensor<dtypes::f32>({4, 4})};
+    tensor_ref b {ctx->new_tensor<dtypes::f32>({4, 4})};
 
     a->splat_one();
     b->splat_one();
-    c->splat_zero();
 
     a->set_name("a");
     b->set_name("b");
-    c->set_name("c");
 
-    c->op(opcode::add, a, b);
-    graph::compute(c);
+    auto c {a + b};
+    auto e {c * c};
+    auto f {e - c};
+    auto g {f * c};
+    graph::compute<dtypes::f32>(&*g);
 
-    for (auto&& x : c->data()) {
-        ASSERT_FLOAT_EQ(x, 1.0f+1.0f);
+    g->print();
+
+    for (auto&& x : g->data()) {
+        ASSERT_FLOAT_EQ(x, 2.0f*((std::pow(2.0f, 2.0f))-2.0f));
     }
 }

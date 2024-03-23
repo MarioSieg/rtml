@@ -158,13 +158,22 @@ namespace rtml {
             std::ranges::fill(data(), x);
         }
 
-        template <typename... Ops>
+        template <const bool Inline = false, typename... Ops>
             requires (sizeof...(Ops) > 0) && (sizeof...(Ops) <= k_max_operands)
                 && (std::is_same_v<std::remove_cvref_t<Ops>, tensor*> && ...)
-        auto op(const enum opcode opc, Ops&&... ops) -> void {
-            m_op = opc;
-            for (auto&& op : std::initializer_list<std::common_type_t<Ops...>>{ops...})
-                m_operands.emplace_back(op);
+        auto op(const enum opcode opc, Ops&&... ops) noexcept -> tensor* {
+            if constexpr (Inline) {
+                m_op = opc;
+                for (auto&& op : std::initializer_list<std::common_type_t<Ops...>>{ops...})
+                    m_operands.emplace_back(op);
+                return this;
+            } else {
+                tensor* const r {isomorphic_clone()};
+                r->m_op = opc;
+                for (auto&& op : std::initializer_list<std::common_type_t<Ops...>>{this, ops...})
+                    r->m_operands.emplace_back(op);
+                return r;
+            }
         }
 
         [[nodiscard]] auto operator()(const std::array<dim, k_max_dims>& indices) const noexcept -> S& {
@@ -295,5 +304,76 @@ namespace rtml {
             float* f32;
             std::uint8_t* u8 {};
         } m_x {};
+    };
+
+    template <typename S = dtypes::f32> requires is_dtype<S>
+    class tensor_ref final {
+    public:
+        constexpr tensor_ref(tensor<S>* const t) noexcept : m_t{t} {}
+        auto operator * () const noexcept -> tensor<S>& { return *m_t; }
+        auto operator -> () const noexcept -> tensor<S>* { return m_t; }
+        auto operator += (const tensor_ref& other) const noexcept -> tensor_ref {
+            m_t->template op<true>(opcode::add, m_t, other.m_t);
+            return *this;
+        }
+        auto operator + (const tensor_ref& other) const noexcept -> tensor_ref {
+            return m_t->template op<false>(opcode::add, other.m_t);
+        }
+        auto operator -= (const tensor_ref& other) const noexcept -> tensor_ref {
+            m_t->template op<true>(opcode::sub, m_t, other.m_t);
+            return *this;
+        }
+        auto operator - (const tensor_ref& other) const noexcept -> tensor_ref {
+            return m_t->template op<false>(opcode::sub, other.m_t);
+        }
+        auto operator *= (const tensor_ref& other) const noexcept -> tensor_ref {
+            m_t->template op<true>(opcode::mul, m_t, other.m_t);
+            return *this;
+        }
+        auto operator * (const tensor_ref& other) const noexcept -> tensor_ref {
+            return m_t->template op<false>(opcode::mul, other.m_t);
+        }
+        auto operator /= (const tensor_ref& other) const noexcept -> tensor_ref {
+            m_t->template op<true>(opcode::div, m_t, other.m_t);
+            return *this;
+        }
+        auto operator / (const tensor_ref& other) const noexcept -> tensor_ref {
+            return m_t->template op<false>(opcode::div, other.m_t);
+        }
+        auto operator &= (const tensor_ref& other) const noexcept -> tensor_ref {
+            m_t->template op<true>(opcode::matmul, m_t, other.m_t);
+            return *this;
+        }
+        auto operator & (const tensor_ref& other) const noexcept -> tensor_ref {
+            return m_t->template op<false>(opcode::matmul, other.m_t);
+        }
+        template <const bool Inline = false>
+        auto softmax() const noexcept -> tensor_ref {
+            return m_t->template op<Inline>(opcode::softmax, m_t);
+        }
+        template <const bool Inline = false>
+        auto sigmoid() const noexcept -> tensor_ref {
+            return m_t->template op<Inline>(opcode::sigmoid, m_t);
+        }
+        template <const bool Inline = false>
+        auto tanh() const noexcept -> tensor_ref {
+            return m_t->template op<Inline>(opcode::tanh, m_t);
+        }
+        template <const bool Inline = false>
+        auto relu() const noexcept -> tensor_ref {
+            return m_t->template op<Inline>(opcode::relu, m_t);
+        }
+        template <const bool Inline = false>
+        auto gelu() const noexcept -> tensor_ref {
+            return m_t->template op<Inline>(opcode::gelu, m_t);
+        }
+        template <const bool Inline = false>
+        auto silu() const noexcept -> tensor_ref {
+            return m_t->template op<Inline>(opcode::silu, m_t);
+        }
+
+
+    private:
+        tensor<S>* m_t {};
     };
 }
