@@ -99,6 +99,9 @@ namespace rtml::graph {
             }()
         };
         static constexpr std::array<eval_function<dtypes::f32>*, static_cast<std::size_t>(opcode::$count)> evaluators {
+            +[]([[maybe_unused]] const blas::compute_ctx& ctx, [[maybe_unused]] tensor<dtypes::f32>* const r, [[maybe_unused]] const std::span<const tensor<dtypes::f32>* const> src) noexcept -> void {
+                // nop
+            },
             +[](const blas::compute_ctx& ctx, tensor<dtypes::f32>* const r, const std::span<const tensor<dtypes::f32>* const> src) noexcept -> void {
                 blas::softmax(ctx, *r, *src[0]);
             },
