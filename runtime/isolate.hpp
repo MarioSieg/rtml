@@ -59,15 +59,11 @@ namespace rtml {
         enum class compute_device : std::uint32_t {
             auto_select = 0,
             cpu,
-            gpu,
-            tpu,
             $count
         };
         static constexpr std::array<const char*, static_cast<std::size_t>(compute_device::$count)> k_compute_device_names {
             "Auto Select",
-            "CPU",
-            "GPU",
-            "TPU"
+            "CPU"
         };
 
         [[nodiscard]] static auto create(

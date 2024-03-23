@@ -6,12 +6,10 @@
 #include <cstdint>
 #include <cstddef>
 #include <iostream>
-#include <mutex>
 #include <span>
 
 #include "fixed_vector.hpp"
 #include "tensor_base.hpp"
-#include "isolate.hpp"
 
 #include <spdlog/spdlog.h>
 
@@ -27,10 +25,10 @@ namespace rtml {
 
     // Represents an N-dimensional (1-k_max_dims) tensor, which is also a vertex in the computation DAG.
     // The dimensionality and data type of a tensor are dynamically handled at runtime.
-    template <typename T = dtypes::f32> requires is_dtype<T>
+    template <typename S = dtypes::f32> requires is_dtype<S>
     class tensor final {
     public:
-        using dtype = T;
+        using dtype = S;
         static constexpr dim k_max_dims {4};
         static constexpr std::size_t k_max_operands {2};
         static constexpr std::size_t k_max_name {128};
@@ -51,26 +49,26 @@ namespace rtml {
         [[nodiscard]] auto operands() noexcept -> fixed_vector<const tensor*, k_max_operands>& { return m_operands; }
         [[nodiscard]] auto operands() const noexcept -> const fixed_vector<const tensor*, k_max_operands>& { return m_operands; }
         [[nodiscard]] auto ptr() const noexcept -> std::uint8_t* { return m_x.u8; }
-        [[nodiscard]] auto data() const noexcept -> std::span<T> { return {reinterpret_cast<T*>(m_x.u8), m_datasize / dtype_traits<T>::k_size}; }
+        [[nodiscard]] auto data() const noexcept -> std::span<S> { return {reinterpret_cast<S*>(m_x.u8), m_datasize / dtype_traits<S>::k_size}; }
         [[nodiscard]] auto name() const noexcept -> const char* { return m_name.data(); }
         [[nodiscard]] auto opcode() const noexcept -> opcode { return m_op; }
         [[nodiscard]] auto is_dense() const noexcept -> bool {
             static_assert(k_max_dims == 4);
             return
-                m_strides[0] == dtype_traits<T>::k_size && // Check if strides are contiguous
+                m_strides[0] == dtype_traits<S>::k_size && // Check if strides are contiguous
                 m_strides[1] == m_strides[0] * m_shape[0] &&
                 m_strides[2] == m_strides[1] * m_shape[1] &&
                 m_strides[3] == m_strides[2] * m_shape[2];
         }
         [[nodiscard]] auto is_dense_except_dim1() const noexcept -> bool {
             return
-            m_strides[0] == dtype_traits<T>::k_size && // Check if strides are contiguous
+            m_strides[0] == dtype_traits<S>::k_size && // Check if strides are contiguous
             m_strides[2] == m_strides[1] * m_shape[1] &&
             m_strides[3] == m_strides[2] * m_shape[2];
         }
         [[nodiscard]] auto is_shape_eq(const tensor* const other) const noexcept -> bool {
             if (this == other) [[unlikely]]
-           return true;
+                return true;
             if (m_num_dims == other->m_num_dims) [[likely]]
                 return std::equal(m_shape.cbegin(), m_shape.cbegin()+m_num_dims, other->m_shape.cbegin());
             return false;
@@ -127,12 +125,12 @@ namespace rtml {
         }
 
         [[nodiscard]] auto isomorphic_clone() noexcept -> tensor* {
-            auto* const ts {m_ctx.new_tensor<T>(used_dims())};
+            auto* const ts {m_ctx.new_tensor<S>(used_dims())};
             ts->format_name("{} (isomorph)", m_name.data());
             return ts;
         }
         [[nodiscard]] auto sliced_clone() noexcept -> tensor* {
-            auto* const ts {m_ctx.new_tensor<T>(
+            auto* const ts {m_ctx.new_tensor<S>(
               used_dims(),
               this,
               0
@@ -156,24 +154,21 @@ namespace rtml {
         auto splat_one() const -> void {
             splat(1.0f);
         }
-        auto splat(const T x) const -> void {
+        auto splat(const S x) const -> void {
             std::ranges::fill(data(), x);
-        }
-        auto push_operand(const tensor* x) -> void {
-            assert(x != nullptr && m_operands.size() < k_max_operands);
-            m_operands.emplace_back(x);
         }
 
         template <typename... Ops>
-        auto operation(const enum opcode opc, Ops&&... operands) -> void {
+            requires (sizeof...(Ops) > 0) && (sizeof...(Ops) <= k_max_operands)
+                && (std::is_same_v<std::remove_cvref_t<Ops>, tensor*> && ...)
+        auto op(const enum opcode opc, Ops&&... ops) -> void {
             m_op = opc;
-            for (auto&& op : {operands...}) {
+            for (auto&& op : std::initializer_list<std::common_type_t<Ops...>>{ops...})
                 m_operands.emplace_back(op);
-            }
         }
 
-        [[nodiscard]] auto operator()(const std::array<dim, k_max_dims>& indices) const noexcept -> T& {
-            return *reinterpret_cast<T*>(
+        [[nodiscard]] auto operator()(const std::array<dim, k_max_dims>& indices) const noexcept -> S& {
+            return *reinterpret_cast<S*>(
                 m_x.u8 +
                 indices[0]*m_strides[0] +
                 indices[1]*m_strides[1] +
@@ -181,8 +176,8 @@ namespace rtml {
                 indices[3]*m_strides[3]
             );
         }
-        [[nodiscard]] auto operator()(const dim i) const noexcept -> T& {
-            if (is_dense()) return reinterpret_cast<T&>(m_x.u8[i*dtype_traits<T>::k_size]);
+        [[nodiscard]] auto operator()(const dim i) const noexcept -> S& {
+            if (is_dense()) return reinterpret_cast<S&>(m_x.u8[i*dtype_traits<S>::k_size]);
             return (*this)(unroll_index(i));
         }
 
@@ -216,7 +211,7 @@ namespace rtml {
                 "Tensor {}{}{} * {}D, Shape [{} X {} X {} X {}], Strides [{}B X {}B X {}B X {}B] {:.01f}{}",
                 m_name.data(),
                 m_name[0] ? ": " : "",
-                dtype_traits<T>::k_name,
+                dtype_traits<S>::k_name,
                 m_num_dims,
                 m_shape[0],
                 m_shape[1],
@@ -235,7 +230,7 @@ namespace rtml {
                     for (dim i2 {}; i2 < m_shape[1]; ++i2) {
                         fmt.push_back('\t');
                         for (dim i1 {}; i1 < m_shape[0]; ++i1) {
-                            const T x {reinterpret_cast<T&>(m_x.u8[dtype_traits<T>::k_size*(i3*m_shape[1]*m_shape[0] + i2*m_shape[0] + i1)])};
+                            const S x {reinterpret_cast<S&>(m_x.u8[dtype_traits<S>::k_size*(i3*m_shape[1]*m_shape[0] + i2*m_shape[0] + i1)])};
                             fmt += fmt::format("{:.03f} ", x);
                         }
                         fmt.push_back('\n');
@@ -263,7 +258,7 @@ namespace rtml {
                 slice_offset += slice->m_slice_offset;
                 slice = slice->m_slice;
             }
-            std::size_t datasize {dtype_traits<T>::k_size}; // Tensor data size to allocate
+            std::size_t datasize {dtype_traits<S>::k_size}; // Tensor data size to allocate
             for (std::size_t i {0}; i < dims.size(); ++i) { // Accumulate total data size
                 assert(dims[i] > 0); // Check if dimensions are valid
                 datasize *= dims[i];
@@ -273,7 +268,7 @@ namespace rtml {
             m_x.u8 = slice
                 ? slice->m_x.u8+slice_offset
                 : static_cast<std::uint8_t*>(k_align_scalar
-                    ? m_ctx.pool().alloc_raw(datasize, dtype_traits<T>::k_align)
+                    ? m_ctx.pool().alloc_raw(datasize, dtype_traits<S>::k_align)
                     : m_ctx.pool().alloc_raw(datasize)); // Point into slice data (if slice) or allocate new data from pool.
             m_datasize = datasize;
             m_num_dims = dims.size();
@@ -281,7 +276,7 @@ namespace rtml {
             m_slice_offset = slice_offset;
             std::ranges::fill(m_shape.begin(), m_shape.end(), 1); // Splat identity dimensions
             std::ranges::copy(dims.begin(), dims.end(), m_shape.begin()); // Copy dimensions
-            m_strides[0] = static_cast<dim>(dtype_traits<T>::k_size);
+            m_strides[0] = static_cast<dim>(dtype_traits<S>::k_size);
             for (std::size_t i {1}; i < k_max_dims; ++i) // Compute strides
                 m_strides[i] = m_strides[i-1]*m_shape[i-1];
         }

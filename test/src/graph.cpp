@@ -22,8 +22,10 @@ TEST(graph, eval) {
     b->set_name("b");
     c->set_name("c");
 
-    c->operation(opcode::add, a, b);
+    c->op(opcode::add, a, b);
     graph::compute(c);
 
-    c->print();
+    for (auto&& x : c->data()) {
+        ASSERT_FLOAT_EQ(x, 1.0f+1.0f);
+    }
 }
