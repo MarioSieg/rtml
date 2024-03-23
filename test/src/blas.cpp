@@ -65,7 +65,7 @@ TEST(blas, tensor_add) {
     std::uniform_real_distribution<float> dist{-1.0f, 1.0f};
     const float x {dist(prng)};
     const float y {dist(prng)};
-    std::array<dim, tensor<>::k_max_dims> shape {4, 4, 8, 3};
+    std::array<dim, k_max_dims> shape {4, 4, 8, 3};
     auto ctx = isolate::create("test", isolate::compute_device::cpu, 0x1000<<3);
     tensor<float>* a = ctx->new_tensor<float>(shape);
     a->splat(x);
@@ -92,7 +92,7 @@ TEST(blas, tensor_sub) {
     std::uniform_real_distribution<float> dist{-1.0f, 1.0f};
     const float x {dist(prng)};
     const float y {dist(prng)};
-    std::array<dim, tensor<float>::k_max_dims> shape {4, 4, 8, 3};
+    std::array<dim, k_max_dims> shape {4, 4, 8, 3};
     auto ctx = isolate::create("test", isolate::compute_device::cpu, 0x1000<<3);
     tensor<float>* a = ctx->new_tensor<float>(shape);
     a->splat(x);
@@ -119,7 +119,7 @@ TEST(blas, tensor_mul) {
     std::uniform_real_distribution<float> dist{-1.0f, 1.0f};
     const float x {dist(prng)};
     const float y {dist(prng)};
-    std::array<dim, tensor<float>::k_max_dims> shape {4, 4, 8, 3};
+    std::array<dim, k_max_dims> shape {4, 4, 8, 3};
     auto ctx = isolate::create("test", isolate::compute_device::cpu, 0x1000<<3);
     tensor<float>* a = ctx->new_tensor<float>(shape);
     a->splat(x);
@@ -146,7 +146,7 @@ TEST(blas, tensor_div) {
     std::uniform_real_distribution<float> dist{-1.0f, 1.0f};
     const float x {dist(prng)};
     const float y {dist(prng)};
-    std::array<dim, tensor<float>::k_max_dims> shape {4, 4, 8, 3};
+    std::array<dim, k_max_dims> shape {4, 4, 8, 3};
     auto ctx = isolate::create("test", isolate::compute_device::cpu, 0x1000<<3);
     tensor<float>* a = ctx->new_tensor<float>(shape);
     a->splat(x);

@@ -16,28 +16,17 @@
 namespace rtml {
     enum class opcode : std::uint32_t;
 
-    template <typename T, typename... Args>
-    [[nodiscard]] constexpr auto tuple_to_array(std::tuple<Args...>&& tup) -> std::array<T, sizeof...(Args)> {
-        std::array<T, sizeof...(Args)> result {};
-        std::apply([&result, i=0](auto&&... v) mutable {((result[i++] = v), ...);}, tup);
-        return result;
-    }
-
     // Represents an N-dimensional (1-k_max_dims) tensor, which is also a vertex in the computation DAG.
     // The dimensionality and data type of a tensor are dynamically handled at runtime.
     template <typename S = dtypes::f32> requires is_dtype<S>
-    class tensor final {
+    class tensor final : public tensor_base {
     public:
         using dtype = S;
-        static constexpr dim k_max_dims {4};
-        static constexpr std::size_t k_max_operands {2};
-        static constexpr std::size_t k_max_name {128};
 
         tensor(const tensor&) = delete;
         tensor(tensor&&) = delete;
         auto operator=(const tensor&) -> tensor& = delete;
         auto operator=(tensor&&) -> tensor& = delete;
-        ~tensor() = default;
 
         [[nodiscard]] auto size() const noexcept -> std::size_t { return m_datasize; }
         [[nodiscard]] auto dim_count() const noexcept -> std::uint32_t { return m_num_dims; }
@@ -46,12 +35,15 @@ namespace rtml {
         [[nodiscard]] auto strides() const noexcept -> const std::array<dim, k_max_dims>& { return m_strides; }
         [[nodiscard]] auto slice_base() const noexcept -> tensor* { return m_slice; }
         [[nodiscard]] auto slice_offset() const noexcept -> std::size_t { return m_slice_offset; }
-        [[nodiscard]] auto operands() noexcept -> fixed_vector<const tensor*, k_max_operands>& { return m_operands; }
-        [[nodiscard]] auto operands() const noexcept -> const fixed_vector<const tensor*, k_max_operands>& { return m_operands; }
         [[nodiscard]] auto ptr() const noexcept -> std::uint8_t* { return m_x.u8; }
         [[nodiscard]] auto data() const noexcept -> std::span<S> { return {reinterpret_cast<S*>(m_x.u8), m_datasize / dtype_traits<S>::k_size}; }
         [[nodiscard]] auto name() const noexcept -> const char* { return m_name.data(); }
-        [[nodiscard]] auto opcode() const noexcept -> opcode { return m_op; }
+        [[nodiscard]] auto operands() const noexcept -> std::span<const tensor<S>* const> {
+            return {
+                reinterpret_cast<const tensor<S>* const*>(raw_operands().data()),
+                raw_operands().size()
+            };
+        }
         [[nodiscard]] auto is_dense() const noexcept -> bool {
             static_assert(k_max_dims == 4);
             return
@@ -156,15 +148,6 @@ namespace rtml {
         }
         auto splat(const S x) const -> void {
             std::ranges::fill(data(), x);
-        }
-
-        template <typename... Ops>
-            requires (sizeof...(Ops) > 0) && (sizeof...(Ops) <= k_max_operands)
-                && (std::is_same_v<std::remove_cvref_t<Ops>, tensor*> && ...)
-        auto op(const enum opcode opc, Ops&&... ops) -> void {
-            m_op = opc;
-            for (auto&& op : std::initializer_list<std::common_type_t<Ops...>>{ops...})
-                m_operands.emplace_back(op);
         }
 
         [[nodiscard]] auto operator()(const std::array<dim, k_max_dims>& indices) const noexcept -> S& {
@@ -285,10 +268,8 @@ namespace rtml {
         std::array<char, k_max_name> m_name {}; // Tensor name - cannot use std::string because we must be trivially destructable
         std::size_t m_datasize {}; // Tensor data size in bytes
         std::uint32_t m_num_dims {}; // Number of dimensions (1-k_max_dims)
-        enum opcode m_op {opcode::nop}; // Operation code
         std::array<dim, k_max_dims> m_shape {}; // 4D dimensions - tensor shape
         std::array<dim, k_max_dims> m_strides {}; // 4D byte strides
-        fixed_vector<const tensor*, k_max_operands> m_operands {}; // Tensor operation operands
         tensor* m_slice {}; // Sliced base tensor, if any
         std::size_t m_slice_offset {}; // Memory offset into sliced base tensor's data
         union {
