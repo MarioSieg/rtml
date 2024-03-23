@@ -139,6 +139,42 @@ namespace rtml::graph {
     };
 
     template <typename S> requires is_dtype<S>
+    auto RTML_COLD generate_graphviz_dot_code(const tensor<S>* const root) -> void {
+        fmt::print("digraph ComputationGraph {{\n");
+        fmt::print("rankdir=LR;\n");
+        graph_visit<graph_eval_order::left_to_right, const tensor<S>>(root, [](const tensor<S>* const t) -> void {
+             constexpr auto ptr2u32 {[](const void* const p) noexcept -> auto {
+                 return static_cast<std::uint32_t>(
+                     std::bit_cast<std::uintptr_t>(p) & ~0u ^ std::bit_cast<std::uintptr_t>(p) >> 32
+                );
+             }};
+             const std::string tensor_id {fmt::format("\"t_{:x}\"", ptr2u32(t))};
+             const char* const color {t->opcode() == opcode::nop ? "springgreen2" : "lightskyblue"};
+             fmt::print(
+                "{} [label=\"{}\", shape=box, style=\"rounded, filled\", color={}, fillcolor={}];\n",
+                tensor_id,
+                t->name(),
+                color,
+                color
+             );
+             if (t->opcode() != opcode::nop) {
+                 std::string op_id {fmt::format("\"op_{:x}\"", ptr2u32(t))};
+                 fmt::print(
+                    "{} [label=\"{}\", shape=circle, style=filled, color=orchid1, fillcolor=orchid1];\n",
+                    op_id,
+                    k_op_names[static_cast<std::size_t>(t->opcode())]
+                );
+                 for (auto&& operand : t->operands()) {
+                     const std::string input_id {fmt::format("\"t_{:x}\"", ptr2u32(operand))};
+                     fmt::print("{} -> {} [arrowhead=vee];\n", input_id, op_id);
+                 }
+                 fmt::print("{} -> {} [arrowhead=vee];\n", op_id, tensor_id);
+             }
+        });
+        fmt::print("}}\n");
+    }
+
+    template <typename S> requires is_dtype<S>
     auto RTML_HOT compute(tensor<S>* const root) -> void {
         blas::compute_ctx ctx {};
         graph_visit<graph_eval_order::left_to_right, const tensor<S>>(root, [&ctx](const tensor<S>* const t) noexcept -> void {

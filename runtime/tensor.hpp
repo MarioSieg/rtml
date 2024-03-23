@@ -23,6 +23,9 @@ namespace rtml {
         return result;
     }
 
+    constexpr bool k_clone_set_name {false}; // If true, some operations like clone or slice add this to the tensor's name.
+    constexpr bool k_op_set_name {true}; // If true, some operations like add/sub will add the same
+
     // Represents an N-dimensional (1-k_max_dims) tensor, which is also a vertex in the computation DAG.
     // The dimensionality and data type of a tensor are dynamically handled at runtime.
     template <typename S = dtypes::f32> requires is_dtype<S>
@@ -126,7 +129,8 @@ namespace rtml {
 
         [[nodiscard]] auto isomorphic_clone() noexcept -> tensor* {
             auto* const ts {m_ctx.new_tensor<S>(used_dims())};
-            ts->format_name("{} (isomorph)", m_name.data());
+            if constexpr (k_clone_set_name)
+                ts->format_name("{} (isomorph)", m_name.data());
             return ts;
         }
         [[nodiscard]] auto sliced_clone() noexcept -> tensor* {
@@ -136,18 +140,17 @@ namespace rtml {
               0
             )};
             std::ranges::copy(m_strides.cbegin(), m_strides.cend(), ts->m_strides.begin());
-            ts->format_name("{} (slice)", m_name.data());
+            if constexpr (k_clone_set_name)
+                ts->format_name("{} (slice)", m_name.data());
             return ts;
         }
         [[nodiscard]] auto clone() noexcept -> tensor* {
-            auto* const ts {m_ctx.new_tensor(
-                used_dims()
-            )};
+            auto* const ts {m_ctx.new_tensor(used_dims())};
             std::ranges::copy(data(), ts->data().begin());
-            ts->format_name("{} (clone)", m_name.data());
+            if constexpr (k_clone_set_name)
+                ts->format_name("{} (clone)", m_name.data());
             return ts;
         }
-
         auto splat_zero() const -> void {
             std::memset(m_x.u8, 0, m_datasize);
         }
@@ -157,23 +160,25 @@ namespace rtml {
         auto splat(const S x) const -> void {
             std::ranges::fill(data(), x);
         }
-
         template <const bool Inline = false, typename... Ops>
             requires (sizeof...(Ops) > 0) && (sizeof...(Ops) <= k_max_operands)
                 && (std::is_same_v<std::remove_cvref_t<Ops>, tensor*> && ...)
         auto op(const enum opcode opc, Ops&&... ops) noexcept -> tensor* {
-            if constexpr (Inline) {
-                m_op = opc;
-                for (auto&& op : std::initializer_list<std::common_type_t<Ops...>>{ops...})
-                    m_operands.emplace_back(op);
-                return this;
-            } else {
-                tensor* const r {isomorphic_clone()};
-                r->m_op = opc;
-                for (auto&& op : std::initializer_list<std::common_type_t<Ops...>>{this, ops...})
-                    r->m_operands.emplace_back(op);
-                return r;
-            }
+            auto emit_op {[=](tensor& dst, auto&&... g_ops) -> tensor* {
+                dst.m_op = opc;
+                for (auto* const op : std::initializer_list<std::common_type_t<Ops...>>{g_ops...})
+                    dst.m_operands.emplace_back(op);
+                if constexpr (k_op_set_name) {
+                    const std::array<std::common_type_t<Ops...>, 1+sizeof...(Ops)> ops_list {g_ops...};
+                    if constexpr (sizeof...(Ops) == 1)
+                        format_name("{} {}", k_op_names[static_cast<std::size_t>(opc)], ops_list[0]->name());
+                    else if constexpr (sizeof...(Ops) == 2)
+                        format_name("{} {} {}", dst.name(), k_op_names[static_cast<std::size_t>(opc)], ops_list[1]->name());
+                }
+                return &dst;
+            }};
+            if constexpr (Inline) return emit_op(*this, ops...);
+            else return emit_op(*isomorphic_clone(), this, ops...);
         }
 
         [[nodiscard]] auto operator()(const std::array<dim, k_max_dims>& indices) const noexcept -> S& {

@@ -24,8 +24,7 @@ TEST(graph, eval) {
     auto f {e - c};
     auto g {f * c};
     graph::compute(&*g);
-
-    g->print();
+    graph::generate_graphviz_dot_code(&*g);
 
     for (auto&& x : g->data()) {
         ASSERT_FLOAT_EQ(x, 2.0f*((std::pow(2.0f, 2.0f))-2.0f));

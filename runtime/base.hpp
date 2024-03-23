@@ -86,7 +86,7 @@ namespace rtml {
 #undef _
 
 #define _(mnemonic, operands, name) name
-    constexpr std::array<std::string_view, static_cast<std::size_t>(opcode::$count)> k_names {
+    constexpr std::array<std::string_view, static_cast<std::size_t>(opcode::$count)> k_op_names {
         rtml_opcode_def(_, rtml_co)
     };
 #undef _
