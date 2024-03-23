@@ -14,17 +14,11 @@ namespace rtml {
     class fixed_vector final {
     public:
         using value_type = T;
-        using size_type = std::size_t;
-        using difference_type = std::ptrdiff_t;
-        using reference = value_type&;
-        using const_reference = const value_type&;
-        using pointer = value_type*;
-        using const_pointer = const value_type*;
-        using iterator = pointer;
-        using const_iterator = const_pointer;
+        using iterator = T*;
+        using const_iterator = const T*;
         using reverse_iterator = std::reverse_iterator<iterator>;
         using const_reverse_iterator = std::reverse_iterator<const_iterator>;
-        static constexpr size_type k_capacity = N;
+        static constexpr std::size_t k_capacity {N};
 
         [[nodiscard]] auto size() const noexcept -> std::size_t {
             return m_len;
@@ -65,41 +59,44 @@ namespace rtml {
         [[nodiscard]] auto crend() const noexcept -> const_reverse_iterator {
             return const_reverse_iterator{cbegin()};
         }
-        [[nodiscard]] auto operator[](const std::size_t index) noexcept -> reference {
-            return reinterpret_cast<T&>(m_storage[sizeof(T)*index]);
+        [[nodiscard]] auto operator[](const std::size_t i) noexcept -> T& {
+            return reinterpret_cast<T*>(m_storage.data())[i];
         }
-        [[nodiscard]] auto operator[](const std::size_t index) const noexcept -> const_reference {
-            return reinterpret_cast<const T&>(m_storage[sizeof(T)*index]);
+        [[nodiscard]] auto operator[](const std::size_t i) const noexcept -> const T& {
+            return reinterpret_cast<const T*>(m_storage.data())[i];
         }
-        [[nodiscard]] auto front() noexcept -> reference {
+        [[nodiscard]] auto front() noexcept -> T& {
             rtml_dassert(!empty(), "empty vector");
             return (*this)[0];
         }
-        [[nodiscard]] auto front() const noexcept -> const_reference {
+        [[nodiscard]] auto front() const noexcept -> const T& {
             rtml_dassert(!empty(), "empty vector");
             return (*this)[0];
         }
-        [[nodiscard]] auto back() noexcept -> reference {
+        [[nodiscard]] auto back() noexcept -> T& {
             rtml_dassert(!empty(), "empty vector");
             return (*this)[m_len-1];
         }
-        [[nodiscard]] auto back() const noexcept -> const_reference {
+        [[nodiscard]] auto back() const noexcept -> const T& {
             rtml_dassert(!empty(), "empty vector");
             return (*this)[m_len-1];
         }
-        [[nodiscard]] auto data() noexcept -> pointer { return reinterpret_cast<T*>(m_storage.data()); }
-        [[nodiscard]] auto data() const noexcept -> const_pointer { return reinterpret_cast<const T*>(m_storage.data()); }
+        [[nodiscard]] auto data() noexcept -> T* { return reinterpret_cast<T*>(m_storage.data()); }
+        [[nodiscard]] auto data() const noexcept -> const T* { return reinterpret_cast<const T*>(m_storage.data()); }
         [[nodiscard]] auto empty() const noexcept -> bool { return m_len == 0; }
         [[nodiscard]] auto full() const noexcept -> bool { return m_len == N; }
         [[nodiscard]] static auto max_size() noexcept -> std::size_t { return N; }
         [[nodiscard]] static auto capacity() noexcept -> std::size_t { return N; }
         template <typename... Args> requires std::is_constructible_v<T, Args...>
-        auto emplace_back(Args&&... args) noexcept(std::is_nothrow_constructible_v<T, Args...>) -> reference {
+        auto emplace_back(Args&&... args) noexcept(std::is_nothrow_constructible_v<T, Args...>) -> T& {
             rtml_assert(m_len < N, "vector full: {}", N);
-            return *new(reinterpret_cast<T*>(m_storage.data()+sizeof(T)*m_len++)) T{std::forward<Args>(args)...};
+            return *new(m_len+++reinterpret_cast<T*>(m_storage.data())) T{std::forward<Args>(args)...};
         }
-        operator std::span<T, std::dynamic_extent> () noexcept {
-            return std::span<T, std::dynamic_extent>{data(), m_len};
+        operator std::span<T> () noexcept {
+            return std::span<T>{data(), m_len};
+        }
+        operator std::span<const T> () const noexcept {
+            return std::span<const T>{data(), m_len};
         }
         auto clear() noexcept -> void {
             if constexpr (!std::is_trivially_destructible_v<T>)

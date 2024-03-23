@@ -16,9 +16,7 @@
 #include <spdlog/spdlog.h>
 
 namespace rtml {
-    namespace graph {
-        enum class opcode : std::uint32_t;
-    }
+    enum class opcode : std::uint32_t;
 
     template <typename T, typename... Args>
     [[nodiscard]] constexpr auto tuple_to_array(std::tuple<Args...>&& tup) -> std::array<T, sizeof...(Args)> {
@@ -55,7 +53,7 @@ namespace rtml {
         [[nodiscard]] auto ptr() const noexcept -> std::uint8_t* { return m_x.u8; }
         [[nodiscard]] auto data() const noexcept -> std::span<T> { return {reinterpret_cast<T*>(m_x.u8), m_datasize / dtype_traits<T>::k_size}; }
         [[nodiscard]] auto name() const noexcept -> const char* { return m_name.data(); }
-        [[nodiscard]] auto opcode() const noexcept -> graph::opcode { return m_op; }
+        [[nodiscard]] auto opcode() const noexcept -> opcode { return m_op; }
         [[nodiscard]] auto is_dense() const noexcept -> bool {
             static_assert(k_max_dims == 4);
             return
@@ -164,6 +162,14 @@ namespace rtml {
         auto push_operand(const tensor* x) -> void {
             assert(x != nullptr && m_operands.size() < k_max_operands);
             m_operands.emplace_back(x);
+        }
+
+        template <typename... Ops>
+        auto operation(const enum opcode opc, Ops&&... operands) -> void {
+            m_op = opc;
+            for (auto&& op : {operands...}) {
+                m_operands.emplace_back(op);
+            }
         }
 
         [[nodiscard]] auto operator()(const std::array<dim, k_max_dims>& indices) const noexcept -> T& {
@@ -284,7 +290,7 @@ namespace rtml {
         std::array<char, k_max_name> m_name {}; // Tensor name - cannot use std::string because we must be trivially destructable
         std::size_t m_datasize {}; // Tensor data size in bytes
         std::uint32_t m_num_dims {}; // Number of dimensions (1-k_max_dims)
-        graph::opcode m_op {}; // Operation code
+        enum opcode m_op {opcode::nop}; // Operation code
         std::array<dim, k_max_dims> m_shape {}; // 4D dimensions - tensor shape
         std::array<dim, k_max_dims> m_strides {}; // 4D byte strides
         fixed_vector<const tensor*, k_max_operands> m_operands {}; // Tensor operation operands

@@ -5,68 +5,34 @@
 #include <functional>
 #include <span>
 
+#include "base.hpp"
 #include "blas.hpp"
+#include "tensor.hpp"
 
 namespace rtml::graph {
-    #define rtml_co ,
-    /* Opcodes: Mnemonic, Operands, Info Mnemonic */
-    #define rtml_opcode_def(_, __) \
-        /* Unary ops */\
-        _(softmax, 1, "softmax")__\
-        _(sigmoid, 1, "sigmoid")__\
-        _(tanh, 1, "tanh")__\
-        _(relu, 1, "relu")__\
-        _(gelu, 1, "gelu")__\
-        _(silu, 1, "silu")__\
-        /* Binary ops */\
-        _(add , 2, "+")__\
-        _(sub , 2, "-")__\
-        _(mul , 2, "*")__\
-        _(div , 2, "/")__\
-        _(matmul, 2, "matmul")__
-
-    #define _(mnemonic, operands, name) mnemonic
-    enum class opcode : std::uint32_t {
-        rtml_opcode_def(_, rtml_co)
-        $count
-    };
-    #undef _
-
-    #define _(mnemonic, operands, name) ((operands)&0xff)
-    constexpr std::array<std::uint32_t, static_cast<std::size_t>(opcode::$count)> k_operands {
-        rtml_opcode_def(_, rtml_co)
-    };
-    #undef _
-
-    #define _(mnemonic, operands, name) name
-    constexpr std::array<std::string_view, static_cast<std::size_t>(opcode::$count)> k_names {
-        rtml_opcode_def(_, rtml_co)
-    };
-    #undef _
-
     template <typename S> requires is_dtype<S>
-    using validate_function = auto (const tensor<S>* dst, std::span<const tensor<S>*> src) -> bool;
+    using validate_function = auto (const tensor<S>* dst, std::span<const tensor<S>* const> src) -> bool;
     template <typename S> requires is_dtype<S>
-    using eval_function = auto (tensor<S>* dst, std::span<const tensor<S>*> src) noexcept -> void;
+    using eval_function = auto (const blas::compute_ctx& ctx, tensor<S>* dst, std::span<const tensor<S>* const> src) noexcept -> void;
 
     enum class graph_eval_order : bool {
         left_to_right,
         right_to_left
     };
 
-    template <const graph_eval_order Ord, typename S, typename F, typename... Args>
-        requires is_dtype<S> && std::is_invocable_r_v<void, const tensor<S>*, Args...>
+    template <const graph_eval_order Ord, typename T, typename F, typename... Args>
     auto graph_visit(
-        const tensor<S>* root,
+        T* root,
         F&& callback,
         Args&&... args
     ) -> void {
+        if (root->opcode() == opcode::nop) return;
         auto&& operands {root->operands()};
         for (std::size_t i {}; i < operands.size(); ++i) {
             std::size_t ii;
             if constexpr (Ord == graph_eval_order::left_to_right) ii = i;
             else ii = operands.size() - i - 1;
-            graph_visit(operands[ii], std::forward<F>(callback), std::forward<Args>(args)...);
+            graph_visit<Ord>(operands[ii], std::forward<F>(callback), std::forward<Args>(args)...);
         }
         std::invoke(callback, root, std::forward<Args>(args)...);
     }
@@ -82,11 +48,11 @@ namespace rtml::graph {
         template <typename S> requires is_dtype<S>
         [[nodiscard]] constexpr auto validate_unary_op(
             const tensor<S>* const r,
-            const std::span<const tensor<S>*> src
+            const std::span<const tensor<S>* const> src
         ) -> bool {
             rtml_verify(r, "Result tensor is null");
             const auto num_operands {static_cast<std::size_t>(r->opcode())};
-            rtml_verify(k_operands[num_operands] == src.size(), "Number of operands mismatch");
+            rtml_verify(k_operands[num_operands] == src.size(), "Number of operands mismatch, expected {} got {}", k_operands[num_operands], src.size());
             rtml_verify(src[0], "Source tensor is null");
             rtml_verify(src[0]->is_dense_except_dim1(), "Source tensor is not dense except dim1");
             rtml_verify(r->is_dense_except_dim1(), "Result tensor is not dense except dim1");
@@ -97,15 +63,15 @@ namespace rtml::graph {
         template <typename S> requires is_dtype<S>
         [[nodiscard]] constexpr auto validate_binary_op(
             const tensor<S>* const r,
-            const std::span<const tensor<S>*> src
+            const std::span<const tensor<S>* const> src
         ) -> bool {
             rtml_verify(r, "Result tensor is null");
             const auto num_operands {static_cast<std::size_t>(r->opcode())};
-            rtml_verify(k_operands[num_operands] == src.size(), "Number of operands mismatch");
+            rtml_verify(k_operands[num_operands] == src.size(), "Number of operands mismatch, expected {} got {}", k_operands[num_operands], src.size());
             rtml_verify(src[0], "Source tensor 0 is null");
             rtml_verify(src[1], "Source tensor 1 is null");
-            rtml_verify(src[0]->strides()[0] != dtype_traits<S>::k_size, "Source tensor 0 stride mismatch");
-            rtml_verify(r->strides()[0] != dtype_traits<S>::k_size, "Result tensor stride mismatch");
+            rtml_verify(src[0]->strides()[0] == dtype_traits<S>::k_size, "Source tensor 0 stride mismatch");
+            rtml_verify(r->strides()[0] == dtype_traits<S>::k_size, "Result tensor stride mismatch");
             rtml_verify(src[1]->can_repeat(src[0]), "Source tensor 1 cannot repeat source tensor 0");
             rtml_verify(src[0]->is_shape_eq(r), "Source tensor 0 shape mismatch");
             return true;
@@ -114,30 +80,13 @@ namespace rtml::graph {
         #undef rtml_verify
     }
 
-    namespace evaluators {
-        template <typename S> requires is_dtype<S>
-        constexpr auto RTML_HOT evaluate_unary_op(
-            const tensor<S>* const r,
-            const std::span<const tensor<S>*> src
-        ) -> void {
-            // todo
-        }
-        template <typename S> requires is_dtype<S>
-        constexpr auto RTML_HOT evaluate_binary_op(
-            const tensor<S>* const r,
-            const std::span<const tensor<S>*> src
-        ) -> void {
-            // todo
-        }
-    }
-
     template <typename S> requires is_dtype<S>
     struct routines;
 
     template <>
     struct routines<dtypes::f32> {
         static constexpr std::array<validate_function<dtypes::f32>*, static_cast<std::size_t>(opcode::$count)> validators {
-            [] consteval -> auto { // Autogenerate table of validation functions for unary and binary ops
+            []() consteval -> auto { // Autogenerate table of validation functions for unary and binary ops
                 std::array<validate_function<dtypes::f32>*, static_cast<std::size_t>(opcode::$count)> result {};
                 for (std::size_t i {}; i < static_cast<std::size_t>(opcode::$count); ++i) {
                     if (k_operands[i] == 1) { // unary op
@@ -150,7 +99,50 @@ namespace rtml::graph {
             }()
         };
         static constexpr std::array<eval_function<dtypes::f32>*, static_cast<std::size_t>(opcode::$count)> evaluators {
-
+            +[](const blas::compute_ctx& ctx, tensor<dtypes::f32>* const r, const std::span<const tensor<dtypes::f32>* const> src) noexcept -> void {
+                blas::softmax(ctx, *r, *src[0]);
+            },
+            +[](const blas::compute_ctx& ctx, tensor<dtypes::f32>* const r, const std::span<const tensor<dtypes::f32>* const> src) noexcept -> void {
+                blas::sigmoid(ctx, *r, *src[0]);
+            },
+            +[](const blas::compute_ctx& ctx, tensor<dtypes::f32>* const r, const std::span<const tensor<dtypes::f32>* const> src) noexcept -> void {
+                blas::tanh(ctx, *r, *src[0]);
+            },
+            +[](const blas::compute_ctx& ctx, tensor<dtypes::f32>* const r, const std::span<const tensor<dtypes::f32>* const> src) noexcept -> void {
+                blas::relu(ctx, *r, *src[0]);
+            },
+            +[](const blas::compute_ctx& ctx, tensor<dtypes::f32>* const r, const std::span<const tensor<dtypes::f32>* const> src) noexcept -> void {
+                blas::gelu(ctx, *r, *src[0]);
+            },
+            +[](const blas::compute_ctx& ctx, tensor<dtypes::f32>* const r, const std::span<const tensor<dtypes::f32>* const> src) noexcept -> void {
+                blas::silu(ctx, *r, *src[0]);
+            },
+            +[](const blas::compute_ctx& ctx, tensor<dtypes::f32>* const r, const std::span<const tensor<dtypes::f32>* const> src) noexcept -> void {
+                blas::add(ctx, *r, *src[0], *src[1]);
+            },
+            +[](const blas::compute_ctx& ctx, tensor<dtypes::f32>* const r, const std::span<const tensor<dtypes::f32>* const> src) noexcept -> void {
+                blas::sub(ctx, *r, *src[0], *src[1]);
+            },
+            +[](const blas::compute_ctx& ctx, tensor<dtypes::f32>* const r, const std::span<const tensor<dtypes::f32>* const> src) noexcept -> void {
+                blas::mul(ctx, *r, *src[0], *src[1]);
+            },
+            +[](const blas::compute_ctx& ctx, tensor<dtypes::f32>* const r, const std::span<const tensor<dtypes::f32>* const> src) noexcept -> void {
+                blas::div(ctx, *r, *src[0], *src[1]);
+            },
+            +[](const blas::compute_ctx& ctx, tensor<dtypes::f32>* const r, const std::span<const tensor<dtypes::f32>* const> src) noexcept -> void {
+                blas::matmul(ctx, *r, *src[0], *src[1]);
+            }
         };
     };
+
+    template <typename S> requires is_dtype<S>
+    auto RTML_HOT compute(tensor<S>* const root) -> void {
+        blas::compute_ctx ctx {};
+        graph_visit<graph_eval_order::left_to_right, const tensor<S>>(root, [&ctx](const tensor<S>* const t) noexcept -> void {
+            const auto op_idx {static_cast<std::size_t>(t->opcode())};
+            const std::span<const tensor<S>* const> operands {t->operands().data(), t->operands().size()};
+            rtml_assert(routines<S>::validators[op_idx](t, operands), "Validation failed");
+            routines<S>::evaluators[op_idx](ctx, const_cast<tensor<S>*>(t), operands);
+        });
+    }
 }

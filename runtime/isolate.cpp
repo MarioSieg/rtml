@@ -11,6 +11,9 @@
 #include <spdlog/sinks/stdout_color_sinks.h>
 #endif
 
+#include "tensor.hpp"
+#include "graph.hpp"
+
 namespace rtml {
     pool::pool(const std::size_t size) : m_size{size} {
         rtml_assert(size > 0, "Pool size must be greater than 0");

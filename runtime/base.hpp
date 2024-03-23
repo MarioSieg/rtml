@@ -20,7 +20,7 @@
 #    define RTML_EXPORT __attribute__((visibility("default")))
 #endif
 
-#define RTML_LOG_ENABLE false
+#define RTML_LOG_ENABLE true
 
 #if RTML_LOG_ENABLE
 #    define rtml_log_info SPDLOG_INFO
@@ -52,6 +52,49 @@ namespace rtml {
     constexpr auto operator ""_gib(const unsigned long long int x) noexcept -> unsigned long long int  {
         return x << 30;
     }
+
+#define rtml_co ,
+    /* Opcodes: Mnemonic, Operands, Info Mnemonic */
+#define rtml_opcode_def(_, __) \
+    /* Nullary ops */\
+    _(nop, 0, "nop")__\
+    /* Unary ops */\
+    _(softmax, 1, "softmax")__\
+    _(sigmoid, 1, "sigmoid")__\
+    _(tanh, 1, "tanh")__\
+    _(relu, 1, "relu")__\
+    _(gelu, 1, "gelu")__\
+    _(silu, 1, "silu")__\
+    /* Binary ops */\
+    _(add , 2, "+")__\
+    _(sub , 2, "-")__\
+    _(mul , 2, "*")__\
+    _(div , 2, "/")__\
+    _(matmul, 2, "matmul")__
+
+#define _(mnemonic, operands, name) mnemonic
+    enum class opcode : std::uint32_t {
+        rtml_opcode_def(_, rtml_co)
+        $count
+    };
+#undef _
+
+#define _(mnemonic, operands, name) ((operands)&0xff)
+    constexpr std::array<std::uint32_t, static_cast<std::size_t>(opcode::$count)> k_operands {
+        rtml_opcode_def(_, rtml_co)
+    };
+#undef _
+
+#define _(mnemonic, operands, name) name
+    constexpr std::array<std::string_view, static_cast<std::size_t>(opcode::$count)> k_names {
+        rtml_opcode_def(_, rtml_co)
+    };
+#undef _
+
+    constexpr opcode k_first_binary_op {opcode::add};
+    static_assert(k_operands[static_cast<std::size_t>(k_first_binary_op)] == 2);
+    static_assert(k_operands[static_cast<std::size_t>(k_first_binary_op)-1] == 1);
+    static_assert(k_operands[static_cast<std::size_t>(k_first_binary_op)+1] == 2);
 }
 
 // Assert for debug and release builds.
