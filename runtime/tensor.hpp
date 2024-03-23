@@ -23,8 +23,7 @@ namespace rtml {
         return result;
     }
 
-    constexpr bool k_clone_set_name {false}; // If true, some operations like clone or slice add this to the tensor's name.
-    constexpr bool k_op_set_name {true}; // If true, some operations like add/sub will add the same
+    constexpr bool k_clone_set_name {true}; // If true, some operations like clone or slice add this to the tensor's name.
 
     // Represents an N-dimensional (1-k_max_dims) tensor, which is also a vertex in the computation DAG.
     // The dimensionality and data type of a tensor are dynamically handled at runtime.
@@ -168,13 +167,6 @@ namespace rtml {
                 dst.m_op = opc;
                 for (auto* const op : std::initializer_list<std::common_type_t<Ops...>>{g_ops...})
                     dst.m_operands.emplace_back(op);
-                if constexpr (k_op_set_name) {
-                    const std::array<std::common_type_t<Ops...>, 1+sizeof...(Ops)> ops_list {g_ops...};
-                    if constexpr (sizeof...(Ops) == 1)
-                        format_name("{} {}", k_op_names[static_cast<std::size_t>(opc)], ops_list[0]->name());
-                    else if constexpr (sizeof...(Ops) == 2)
-                        format_name("{} {} {}", dst.name(), k_op_names[static_cast<std::size_t>(opc)], ops_list[1]->name());
-                }
                 return &dst;
             }};
             if constexpr (Inline) return emit_op(*this, ops...);
