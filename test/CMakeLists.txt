@@ -6,4 +6,4 @@ target_link_libraries(
     rtml_test
     rtml_runtime GTest::gtest_main
 )
-target_include_directories(rtml_test PRIVATE "../runtime")
+target_include_directories(rtml_test PRIVATE "../rtml")

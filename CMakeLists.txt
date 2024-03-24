@@ -8,7 +8,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 option(RTML_BUILD_TESTS "Build tests" ON)
 option(RTML_BUILD_BENCHMARK "Build benchmarks" ON)
 
-add_subdirectory(runtime)
+add_subdirectory(rtml)
 
 if (RTML_BUILD_TESTS)
     add_subdirectory(test)

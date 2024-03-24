@@ -150,27 +150,29 @@ namespace rtml {
                 ts->format_name("{} (clone)", m_name.data());
             return ts;
         }
-        auto splat_zero() const -> void {
+        auto splat_zero() -> tensor* {
             std::memset(m_x.u8, 0, m_datasize);
+            return this;
         }
-        auto splat_one() const -> void {
+        auto splat_one() -> tensor* {
             splat(1.0f);
+            return this;
         }
-        auto splat(const S x) const -> void {
+        auto splat(const S x) -> tensor* {
             std::ranges::fill(data(), x);
+            return this;
         }
-        template <const bool Inline = false, typename... Ops>
-            requires (sizeof...(Ops) > 0) && (sizeof...(Ops) <= k_max_operands)
-                && (std::is_same_v<std::remove_cvref_t<Ops>, tensor*> && ...)
+        template <typename... Ops>
+            requires (sizeof...(Ops) >= 0) && (sizeof...(Ops) <= k_max_operands)
+                && ((sizeof...(Ops) > 0) || (std::is_same_v<std::remove_cvref_t<Ops>, tensor*> && ...))
         auto op(const enum opcode opc, Ops&&... ops) noexcept -> tensor* {
             auto emit_op {[=](tensor& dst, auto&&... g_ops) -> tensor* {
                 dst.m_op = opc;
-                for (auto* const op : std::initializer_list<std::common_type_t<Ops...>>{g_ops...})
+                for (auto* const op : {g_ops...})
                     dst.m_operands.emplace_back(op);
                 return &dst;
             }};
-            if constexpr (Inline) return emit_op(*this, ops...);
-            else return emit_op(*isomorphic_clone(), this, ops...);
+            return emit_op(*isomorphic_clone(), this, ops...);
         }
 
         [[nodiscard]] auto operator()(const std::array<dim, k_max_dims>& indices) const noexcept -> S& {
@@ -187,9 +189,15 @@ namespace rtml {
             return (*this)(unroll_index(i));
         }
 
-        auto RTML_COLD set_name(const char* name) -> void {
+        auto RTML_COLD set_name(const char* name) -> tensor* {
             std::strncpy(m_name.data(), name, k_max_name);
             m_name[k_max_name-1] = '\0';
+            return this;
+        }
+        auto RTML_COLD set_name(const std::string& name) -> tensor* {
+            std::strncpy(m_name.data(), name.c_str(), k_max_name);
+            m_name[k_max_name-1] = '\0';
+            return this;
         }
         template<typename... Args>
         auto RTML_COLD format_name(const fmt::format_string<Args...>& fmt, Args&&... args) -> void {
@@ -306,67 +314,42 @@ namespace rtml {
     template <typename S = dtypes::f32> requires is_dtype<S>
     class tensor_ref final {
     public:
+        constexpr tensor_ref() noexcept = default;
         constexpr tensor_ref(tensor<S>* const t) noexcept : m_t{t} {}
         auto operator * () const noexcept -> tensor<S>& { return *m_t; }
         auto operator -> () const noexcept -> tensor<S>* { return m_t; }
-        auto operator += (const tensor_ref& other) const noexcept -> tensor_ref {
-            m_t->template op<true>(opcode::add, m_t, other.m_t);
-            return *this;
-        }
         auto operator + (const tensor_ref& other) const noexcept -> tensor_ref {
-            return m_t->template op<false>(opcode::add, other.m_t);
-        }
-        auto operator -= (const tensor_ref& other) const noexcept -> tensor_ref {
-            m_t->template op<true>(opcode::sub, m_t, other.m_t);
-            return *this;
+            return m_t->op(opcode::add, other.m_t);
         }
         auto operator - (const tensor_ref& other) const noexcept -> tensor_ref {
-            return m_t->template op<false>(opcode::sub, other.m_t);
-        }
-        auto operator *= (const tensor_ref& other) const noexcept -> tensor_ref {
-            m_t->template op<true>(opcode::mul, m_t, other.m_t);
-            return *this;
+            return m_t->op(opcode::sub, other.m_t);
         }
         auto operator * (const tensor_ref& other) const noexcept -> tensor_ref {
-            return m_t->template op<false>(opcode::mul, other.m_t);
-        }
-        auto operator /= (const tensor_ref& other) const noexcept -> tensor_ref {
-            m_t->template op<true>(opcode::div, m_t, other.m_t);
-            return *this;
+            return m_t->op(opcode::mul, other.m_t);
         }
         auto operator / (const tensor_ref& other) const noexcept -> tensor_ref {
-            return m_t->template op<false>(opcode::div, other.m_t);
-        }
-        auto operator &= (const tensor_ref& other) const noexcept -> tensor_ref {
-            m_t->template op<true>(opcode::matmul, m_t, other.m_t);
-            return *this;
+            return m_t->op(opcode::div, other.m_t);
         }
         auto operator & (const tensor_ref& other) const noexcept -> tensor_ref {
-            return m_t->template op<false>(opcode::matmul, other.m_t);
+            return m_t->op(opcode::matmul, other.m_t);
         }
-        template <const bool Inline = false>
         auto softmax() const noexcept -> tensor_ref {
-            return m_t->template op<Inline>(opcode::softmax, m_t);
+            return m_t->op(opcode::softmax);
         }
-        template <const bool Inline = false>
         auto sigmoid() const noexcept -> tensor_ref {
-            return m_t->template op<Inline>(opcode::sigmoid, m_t);
+            return m_t->op(opcode::sigmoid);
         }
-        template <const bool Inline = false>
         auto tanh() const noexcept -> tensor_ref {
-            return m_t->template op<Inline>(opcode::tanh, m_t);
+            return m_t->op(opcode::tanh);
         }
-        template <const bool Inline = false>
         auto relu() const noexcept -> tensor_ref {
-            return m_t->template op<Inline>(opcode::relu, m_t);
+            return m_t->op(opcode::relu);
         }
-        template <const bool Inline = false>
         auto gelu() const noexcept -> tensor_ref {
-            return m_t->template op<Inline>(opcode::gelu, m_t);
+            return m_t->op(opcode::gelu);
         }
-        template <const bool Inline = false>
         auto silu() const noexcept -> tensor_ref {
-            return m_t->template op<Inline>(opcode::silu, m_t);
+            return m_t->op(opcode::silu);
         }
 
 

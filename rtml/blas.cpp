@@ -32,58 +32,58 @@ namespace rtml::blas {
 
         template <typename S> requires is_dtype<S>
         static auto RTML_HOT softmax(const std::size_t n, S* const ov, const S* const x) noexcept -> void {
-            for (std::size_t i = 0; i < n; ++i)
+            for (std::size_t i {}; i < n; ++i)
                 ov[i] = std::expf(x[i]);
         }
         template <typename S> requires is_dtype<S>
         static auto RTML_HOT sigmoid(const std::size_t n, S* const ov, const S* const x) noexcept -> void {
-            for (std::size_t i = 0; i < n; ++i)
+            for (std::size_t i {}; i < n; ++i)
                 ov[i] = 1.0f / (1.0f + std::expf(-x[i]));
         }
         template <typename S> requires is_dtype<S>
         static auto RTML_HOT tanh(const std::size_t n, S* const ov, const S* const x) noexcept -> void {
-            for (std::size_t i = 0; i < n; ++i)
+            for (std::size_t i {}; i < n; ++i)
                 ov[i] = std::tanh(x[i]);
         }
         template <typename S> requires is_dtype<S>
         static auto RTML_HOT relu(const std::size_t n, S* const ov, const S* const x) noexcept -> void {
-            for (std::size_t i = 0; i < n; ++i)
+            for (std::size_t i {}; i < n; ++i)
                 ov[i] = std::max(x[i], 0.0f);
         }
         template <typename S> requires is_dtype<S>
         static auto RTML_HOT gelu(const std::size_t n, S* const ov, const S* const x) noexcept -> void {
-            for (std::size_t i = 0; i < n; ++i)
+            for (std::size_t i {}; i < n; ++i)
                 ov[i] = 0.5f * x[i] * (1.0f + std::tanh(k_rtml_sqrt2pi * x[i] * (1.0f + k_rtml_gelu_coeff * x[i] * x[i])));
         }
         template <typename S> requires is_dtype<S>
         static auto RTML_HOT silu(const std::size_t n, S* const ov, const S* const x) noexcept -> void {
-            for (std::size_t i = 0; i < n; ++i)
+            for (std::size_t i {}; i < n; ++i)
                 ov[i] = x[i] / (1.0f + std::exp(-x[i]));
         }
         template <typename S> requires is_dtype<S>
         static auto RTML_HOT add(const std::size_t n, S* const ov, const S* const x, const S* const y) noexcept -> void {
-            for (std::size_t i = 0; i < n; ++i)
+            for (std::size_t i {}; i < n; ++i)
                 ov[i] = scalar::add(x[i], y[i]);
         }
         template <typename S> requires is_dtype<S>
         static auto RTML_HOT sub(const std::size_t n, S* const ov, const S* const x, const S* const y) noexcept -> void {
-            for (std::size_t i = 0; i < n; ++i)
+            for (std::size_t i {}; i < n; ++i)
                 ov[i] = scalar::sub(x[i], y[i]);
         }
         template <typename S> requires is_dtype<S>
         static auto RTML_HOT mul(const std::size_t n, S* const ov, const S* const x, const S* const y) noexcept -> void {
-            for (std::size_t i = 0; i < n; ++i)
+            for (std::size_t i {}; i < n; ++i)
                 ov[i] = scalar::mul(x[i], y[i]);
         }
         template <typename S> requires is_dtype<S>
         static auto RTML_HOT div(const std::size_t n, S* const ov, const S* const x, const S* const y) noexcept -> void {
-            for (std::size_t i = 0; i < n; ++i)
+            for (std::size_t i {}; i < n; ++i)
                 ov[i] = scalar::div(x[i], y[i]);
         }
         template <typename S> requires is_dtype<S>
         static auto RTML_HOT dot(const std::size_t n, S* const os, const S* const x, const S* const y) noexcept -> void {
             double sum = 0.0;
-            for (std::size_t i = 0; i < n; ++i)
+            for (std::size_t i {}; i < n; ++i)
                 sum += static_cast<double>(x[i] * y[i]);
             *os = static_cast<float>(sum);
         }

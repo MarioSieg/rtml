@@ -6,4 +6,4 @@ target_link_libraries(
     rtml_runtime benchmark::benchmark
 )
 target_include_directories(rtml_benchmark PRIVATE "gbench/include")
-target_include_directories(rtml_benchmark PRIVATE "../runtime")
+target_include_directories(rtml_benchmark PRIVATE "../rtml")
