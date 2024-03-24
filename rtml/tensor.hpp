@@ -6,6 +6,7 @@
 #include <cstdint>
 #include <cstddef>
 #include <iostream>
+#include <random>
 #include <span>
 
 #include "fixed_vector.hpp"
@@ -150,16 +151,28 @@ namespace rtml {
                 ts->format_name("{} (clone)", m_name.data());
             return ts;
         }
-        auto splat_zero() -> tensor* {
+        auto fill_zero() -> tensor* {
             std::memset(m_x.u8, 0, m_datasize);
             return this;
         }
-        auto splat_one() -> tensor* {
-            splat(1.0f);
+        auto fill_random(const S min = -dtype_traits<S>::k_one, const S max = dtype_traits<S>::k_one) -> tensor* {
+            // todo: use tausworthe prng
+            std::mt19937_64 rng {std::random_device{}()};
+            std::uniform_real_distribution<S> dist {min, max};
+            std::ranges::generate(data(), [&dist, &rng] noexcept -> S { return dist(rng); });
             return this;
         }
-        auto splat(const S x) -> tensor* {
+        auto fill_one() -> tensor* {
+            fill(1.0f);
+            return this;
+        }
+        auto fill(const S x) -> tensor* {
             std::ranges::fill(data(), x);
+            return this;
+        }
+        auto fill_data(const std::span<const S> data) -> tensor* {
+            rtml_dassert1(data.size() == elem_count());
+            std::ranges::copy(data, this->data().begin());
             return this;
         }
         template <typename... Ops>

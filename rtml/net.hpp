@@ -8,19 +8,24 @@
 namespace rtml {
     class net final {
     public:
-        explicit net(isolate& ctx, std::vector<dim>&& arch);
+        explicit net(isolate& ctx, std::vector<dim>&& layers);
         net(const net&) = delete;
         net(net&&) = delete;
         auto operator=(const net&) -> net& = delete;
         auto operator=(net&&) -> net& = delete;
         ~net() = default;
 
-        auto forward() const -> void;
+        [[nodiscard]] auto forward_propagate(tensor_ref<> input) const -> tensor_ref<>;
+        auto backward_propagate(tensor_ref<> outputs, tensor_ref<> targets) const -> void;
+        auto train(tensor_ref<> outputs, tensor_ref<> targets, dim epochs, float learning_rate) const -> void;
 
     private:
-        std::vector<dim> m_arch {};
+        auto build_forward_graph() -> void;
+        auto build_backward_graph() -> void;
+
+        std::vector<dim> m_layers {};
         std::vector<tensor_ref<>> m_weights {};
         std::vector<tensor_ref<>> m_biases {};
-        std::vector<tensor_ref<>> m_ass {};
+        std::vector<tensor_ref<>> m_data {};
     };
 }

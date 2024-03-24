@@ -32,9 +32,9 @@ public:
         a = ctx->new_tensor<float>(k_shapes);
         b = ctx->new_tensor<float>(k_shapes);
         c = ctx->new_tensor<float>(k_shapes);
-        a->splat(x);
-        b->splat(y);
-        c->splat_zero();
+        a->fill(x);
+        b->fill(y);
+        c->fill_zero();
     }
 
     auto TearDown(benchmark::State& state) -> void override {

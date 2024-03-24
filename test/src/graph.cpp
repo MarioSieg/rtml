@@ -13,8 +13,8 @@ TEST(graph, eval) {
     tensor_ref a {ctx->new_tensor<dtypes::f32>({4, 4})};
     tensor_ref b {ctx->new_tensor<dtypes::f32>({4, 4})};
 
-    a->splat_one();
-    b->splat_one();
+    a->fill_one();
+    b->fill_one();
 
     a->set_name("a");
     b->set_name("b");

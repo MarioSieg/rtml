@@ -68,11 +68,11 @@ TEST(blas, tensor_add) {
     std::array<dim, tensor<>::k_max_dims> shape {4, 4, 8, 3};
     auto ctx = isolate::create("test", isolate::compute_device::cpu, 0x1000<<3);
     tensor<float>* a = ctx->new_tensor<float>(shape);
-    a->splat(x);
+    a->fill(x);
     tensor<float>* b = ctx->new_tensor<float>(shape);
-    b->splat(y);
+    b->fill(y);
     tensor<float>* c = ctx->new_tensor<float>(shape);
-    c->splat_zero();
+    c->fill_zero();
     blas::compute_ctx cctx {};
     blas::add(cctx, *c, *a, *b);
     for (dim i {}; i < shape[0]; ++i) {
@@ -95,11 +95,11 @@ TEST(blas, tensor_sub) {
     std::array<dim, tensor<float>::k_max_dims> shape {4, 4, 8, 3};
     auto ctx = isolate::create("test", isolate::compute_device::cpu, 0x1000<<3);
     tensor<float>* a = ctx->new_tensor<float>(shape);
-    a->splat(x);
+    a->fill(x);
     tensor<float>* b = ctx->new_tensor<float>(shape);
-    b->splat(y);
+    b->fill(y);
     tensor<float>* c = ctx->new_tensor<float>(shape);
-    c->splat_zero();
+    c->fill_zero();
     blas::compute_ctx cctx {};
     blas::sub(cctx, *c, *a, *b);
     for (dim i {}; i < shape[0]; ++i) {
@@ -122,11 +122,11 @@ TEST(blas, tensor_mul) {
     std::array<dim, tensor<float>::k_max_dims> shape {4, 4, 8, 3};
     auto ctx = isolate::create("test", isolate::compute_device::cpu, 0x1000<<3);
     tensor<float>* a = ctx->new_tensor<float>(shape);
-    a->splat(x);
+    a->fill(x);
     tensor<float>* b = ctx->new_tensor<float>(shape);
-    b->splat(y);
+    b->fill(y);
     tensor<float>* c = ctx->new_tensor<float>(shape);
-    c->splat_zero();
+    c->fill_zero();
     blas::compute_ctx cctx {};
     blas::mul(cctx, *c, *a, *b);
     for (dim i {}; i < shape[0]; ++i) {
@@ -149,11 +149,11 @@ TEST(blas, tensor_div) {
     std::array<dim, tensor<float>::k_max_dims> shape {4, 4, 8, 3};
     auto ctx = isolate::create("test", isolate::compute_device::cpu, 0x1000<<3);
     tensor<float>* a = ctx->new_tensor<float>(shape);
-    a->splat(x);
+    a->fill(x);
     tensor<float>* b = ctx->new_tensor<float>(shape);
-    b->splat(y);
+    b->fill(y);
     tensor<float>* c = ctx->new_tensor<float>(shape);
-    c->splat_zero();
+    c->fill_zero();
     blas::compute_ctx cctx {};
     blas::div(cctx, *c, *a, *b);
     for (dim i {}; i < shape[0]; ++i) {
@@ -201,7 +201,7 @@ TEST(blas, tensor_matmul2) {
     tensor<float>* b = ctx->new_tensor<float>({N, K});
     std::memcpy(b->ptr(), B.data(), B.size() * sizeof(float));
     tensor<float>* c = ctx->new_tensor<float>({M, N});
-    c->splat_zero();
+    c->fill_zero();
     blas::compute_ctx cctx {};
     blas::matmul(cctx, *c, *a, *b);
     c->print();
