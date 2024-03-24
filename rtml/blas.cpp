@@ -32,13 +32,13 @@ namespace rtml::blas {
 
         template <typename S> requires is_dtype<S>
         static auto RTML_HOT softmax(const std::size_t n, S* const ov, const S* const x) noexcept -> void {
-            for (std::size_t i {}; i < n; ++i)
-                ov[i] = std::expf(x[i]);
+            for (std::size_t i = 0; i < n; ++i)
+                ov[i] = std::exp(x[i]);
         }
         template <typename S> requires is_dtype<S>
         static auto RTML_HOT sigmoid(const std::size_t n, S* const ov, const S* const x) noexcept -> void {
-            for (std::size_t i {}; i < n; ++i)
-                ov[i] = 1.0f / (1.0f + std::expf(-x[i]));
+            for (std::size_t i = 0; i < n; ++i)
+                ov[i] = 1.0f / (1.0f + std::exp(-x[i]));
         }
         template <typename S> requires is_dtype<S>
         static auto RTML_HOT tanh(const std::size_t n, S* const ov, const S* const x) noexcept -> void {
