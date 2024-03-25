@@ -6,6 +6,7 @@
 #include <cstdint>
 #include <cstddef>
 #include <iostream>
+#include <ranges>
 #include <random>
 #include <span>
 
@@ -159,7 +160,8 @@ namespace rtml {
             // todo: use tausworthe prng
             std::mt19937_64 rng {std::random_device{}()};
             std::uniform_real_distribution<S> dist {min, max};
-            std::ranges::generate(data(), [&dist, &rng] noexcept -> S { return dist(rng); });
+            const std::span<S> ref {data()};
+            std::generate(ref.begin(), ref.end(), [&dist, &rng] () noexcept -> S { return dist(rng); });
             return this;
         }
         auto fill_one() -> tensor* {
@@ -176,7 +178,7 @@ namespace rtml {
             return this;
         }
         template <typename... Ops>
-            requires (sizeof...(Ops) >= 0) && (sizeof...(Ops) <= k_max_operands)
+            requires (sizeof...(Ops) <= k_max_operands)
                 && ((sizeof...(Ops) > 0) || (std::is_same_v<std::remove_cvref_t<Ops>, tensor*> && ...))
         auto op(const enum opcode opc, Ops&&... ops) noexcept -> tensor* {
             auto emit_op {[=](tensor& dst, auto&&... g_ops) -> tensor* {

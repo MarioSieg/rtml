@@ -2,8 +2,10 @@
 
 #pragma once
 
+#include <sstream>
 #include <functional>
 #include <span>
+#include <unordered_set>
 
 #include "base.hpp"
 #include "blas.hpp"
@@ -139,31 +141,28 @@ namespace rtml::graph {
     };
 
     template <typename S> requires is_dtype<S>
-    auto RTML_COLD generate_graphviz_dot_code(const tensor<S>* const root) -> void {
-        fmt::print("digraph ComputationGraph {{\n");
-        fmt::print("rankdir=LR;\n");
+    auto RTML_COLD generate_graphviz_dot_code(std::stringstream& ss, const tensor<S>* const root) -> void {
+        ss << "digraph ComputationGraph {{\n";
+        ss << "rankdir=LR;\n";
+        std::unordered_set<const tensor<S>*> visited {};
         // ported from RTML v.1 which was written in C. TODO: port to C++
-        graph_visit<graph_eval_order::left_to_right, const tensor<S>>(root, [](const tensor<S>* const t) -> void {
-            #define ptr2u32(p) ((unsigned)(((p)&~0u)^((p)>>32)))
-            char tensor_id[512];
-            std::snprintf(tensor_id, sizeof(tensor_id), "\"t_%x\"", ptr2u32((uintptr_t)t));
-            const char *color = t->opcode() == opcode::nop ? "springgreen2" : "lightskyblue";
-            std::printf("%s [label=\"%s\", shape=box, style=\"rounded, filled\", color=%s, fillcolor=%s];\n", tensor_id, t->name(),
-            color, color);
+        graph_visit<graph_eval_order::left_to_right, const tensor<S>>(root, [&visited, &ss](const tensor<S>* const t) -> void {
+            if (visited.contains(t)) return;
+            visited.insert(t);
+            const auto tensor_id {fmt::format("t_{:x}", std::bit_cast<std::uintptr_t>(t))};
+            const char* const color {t->opcode() == opcode::nop ? "springgreen2" : "lightskyblue"};
+            ss << fmt::format("{} [label=\"{}\", shape=box, style=\"rounded, filled\", color={}, fillcolor={}];\n", tensor_id, t->name(), color, color);
             if (t->opcode() != opcode::nop) {
-                char op_id[512];
-                std::snprintf(op_id, sizeof(op_id), "\"op_%x\"", ptr2u32((uintptr_t)t));
-                std::printf("%s [label=\"%s\", shape=circle, style=filled, color=orchid1, fillcolor=orchid1];\n", op_id, k_op_names[static_cast<std::size_t>(t->opcode())].data());
+                const auto op_id {fmt::format("op_{:x}", std::bit_cast<std::uintptr_t>(t))};
+                ss << fmt::format("{} [label=\"{}\", shape=circle, style=filled, color=orchid1, fillcolor=orchid1];\n", op_id, k_op_names[static_cast<std::size_t>(t->opcode())]);
                 for (std::size_t i {}; i < t->operands().size(); ++i) {
-                    char input_id[512];
-                    std::snprintf(input_id, sizeof(input_id), "\"t_%x\"", ptr2u32((uintptr_t)t->operands()[i]));
-                    std::printf("%s -> %s [arrowhead=vee];\n", input_id, op_id);
+                    const auto input_id {fmt::format("t_{:x}", std::bit_cast<std::uintptr_t>(t->operands()[i]))};
+                    ss << fmt::format("{} -> {} [arrowhead=vee];\n", input_id, op_id);
                 }
-                std::printf("%s -> %s [arrowhead=vee];\n", op_id, tensor_id);
+                ss << fmt::format("{} -> {} [arrowhead=vee];\n", op_id, tensor_id);
             }
-            #undef ptr2u32
         });
-        fmt::print("}}\n");
+        ss << "}}\n";
     }
 
     template <typename S> requires is_dtype<S>

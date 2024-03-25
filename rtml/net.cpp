@@ -16,20 +16,19 @@ namespace rtml {
         build_forward_graph();
     }
 
-    auto net::forward_propagate(tensor_ref<> input) const -> tensor_ref<> {
+    auto net::forward_propagate([[maybe_unused]]tensor_ref<> input) const -> tensor_ref<> {
+        return {};
+    }
+
+    auto net::backward_propagate([[maybe_unused]]tensor_ref<> outputs, [[maybe_unused]]tensor_ref<> targets) const -> void {
 
     }
 
-    auto net::backward_propagate(tensor_ref<> outputs, tensor_ref<> targets) const -> void {
-
-    }
-
-    auto net::train(tensor_ref<> outputs, tensor_ref<> targets, const dim epochs, const float learning_rate) const -> void {
+    auto net::train([[maybe_unused]]tensor_ref<> outputs, tensor_ref<> targets, const dim epochs, const float learning_rate) const -> void {
         const auto now {std::chrono::system_clock::now()};
         rtml_log_info("Training network with {} epochs and learning rate {}", epochs, learning_rate);
         for (dim i {}; i < epochs; ++i) {
-            std::this_thread::sleep_for(std::chrono::microseconds{8});
-            tensor_ref<> output {forward_propagate(output)};
+            tensor_ref<> output {forward_propagate(outputs)};
             backward_propagate(output, targets);
             if (i % 1000 == 0) {
                 const double percent {static_cast<double>(i) / static_cast<double>(epochs) * 100.0};

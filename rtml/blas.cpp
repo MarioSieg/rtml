@@ -232,7 +232,7 @@ namespace rtml::blas {
      * TODO: Handle broadcasting
      */
     static auto RTML_AINLINE RTML_HOT blas_tensor_sgemm_naive(
-        const compute_ctx& ctx,
+        [[maybe_unused]] const compute_ctx& ctx,
         tensor<>& r,       // result
         const tensor<>& x, // X = src 0
         const tensor<>& y  // Y = src 1
@@ -248,7 +248,7 @@ namespace rtml::blas {
         const std::uint8_t* const b_y {y.ptr()};                        // Data base ptr
         const auto [x_d0, x_d1, x_d2, x_d3] {x.dims()};                 // Dimensions of x
         const auto [x_s0, x_s1, x_s2, x_s3] {x.strides()};              // Strides of x
-        const auto [y_d0, y_d1, y_d2, y_d3] {y.dims()};                 // Dimensions of y
+        [[maybe_unused]] const auto [y_d0, y_d1, y_d2, y_d3] {y.dims()};                 // Dimensions of y
         const auto [y_s0, y_s1, y_s2, y_s3] {y.strides()};              // Strides of y
         const auto [r_d0, r_d1, r_d2, r_d3] {r.dims()};                 // Dimensions of r
         const auto [r_s0, r_s1, r_s2, r_s3] {r.strides()};              // Strides of r
@@ -284,7 +284,7 @@ namespace rtml::blas {
      * TODO: Use this version if it makes sense (e.g. if Y is transposed and the result is transposed).
      * TODO: Comments
      */
-    static auto RTML_AINLINE RTML_HOT blas_tensor_sgemm_tranposed(
+    [[maybe_unused]] static auto RTML_AINLINE RTML_HOT blas_tensor_sgemm_tranposed(
         const compute_ctx& ctx,
         tensor<>& r,       // result
         const tensor<>& x, // X = src 0
@@ -420,7 +420,7 @@ namespace rtml::blas {
         >(ctx, r, x, vec::silu);
     }
 
-    auto blas::add(const compute_ctx& ctx, tensor<dtypes::f32>& r, const tensor<dtypes::f32>& x, const tensor<dtypes::f32>& y) noexcept -> void {
+    auto add(const compute_ctx& ctx, tensor<dtypes::f32>& r, const tensor<dtypes::f32>& x, const tensor<dtypes::f32>& y) noexcept -> void {
         blas_tensor_gen_op_binary
         <
             std::decay_t<decltype(r)>::dtype,
@@ -429,7 +429,7 @@ namespace rtml::blas {
         >(ctx, r, x, y, vec::add, scalar::add);
     }
 
-    auto blas::sub(const compute_ctx& ctx, tensor<dtypes::f32>& r, const tensor<dtypes::f32>& x, const tensor<dtypes::f32>& y) noexcept -> void {
+    auto sub(const compute_ctx& ctx, tensor<dtypes::f32>& r, const tensor<dtypes::f32>& x, const tensor<dtypes::f32>& y) noexcept -> void {
         blas_tensor_gen_op_binary
         <
             std::decay_t<decltype(r)>::dtype,
@@ -438,7 +438,7 @@ namespace rtml::blas {
         >(ctx, r, x, y, vec::sub, scalar::sub);
     }
 
-    auto blas::mul(const compute_ctx& ctx, tensor<dtypes::f32>& r, const tensor<dtypes::f32>& x, const tensor<dtypes::f32>& y) noexcept -> void {
+    auto mul(const compute_ctx& ctx, tensor<dtypes::f32>& r, const tensor<dtypes::f32>& x, const tensor<dtypes::f32>& y) noexcept -> void {
         blas_tensor_gen_op_binary
         <
             std::decay_t<decltype(r)>::dtype,
@@ -447,7 +447,7 @@ namespace rtml::blas {
         >(ctx, r, x, y, vec::mul, scalar::mul);
     }
 
-    auto blas::div(const compute_ctx& ctx, tensor<dtypes::f32>& r, const tensor<dtypes::f32>& x, const tensor<dtypes::f32>& y) noexcept -> void {
+    auto div(const compute_ctx& ctx, tensor<dtypes::f32>& r, const tensor<dtypes::f32>& x, const tensor<dtypes::f32>& y) noexcept -> void {
         blas_tensor_gen_op_binary
         <
             std::decay_t<decltype(r)>::dtype,

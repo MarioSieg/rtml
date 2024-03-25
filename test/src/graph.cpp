@@ -2,6 +2,7 @@
 
 #include <gtest/gtest.h>
 
+#include <fstream>
 #include <isolate.hpp>
 #include <tensor.hpp>
 #include <graph.hpp>
@@ -24,7 +25,11 @@ TEST(graph, eval) {
     auto f {e - c};
     auto g {f * c};
     graph::compute(&*g);
-    graph::generate_graphviz_dot_code(&*g);
+    std::ofstream out {"graph.dot"};
+    std::stringstream ss {};
+    graph::generate_graphviz_dot_code(ss, &*g);
+    out << ss.str();
+    out.close();
 
     for (auto&& x : g->data()) {
         ASSERT_FLOAT_EQ(x, 2.0f*((std::pow(2.0f, 2.0f))-2.0f));

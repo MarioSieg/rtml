@@ -1,5 +1,5 @@
 file(GLOB SOURCES *.cpp *.hpp *.h)
-add_compile_options(-march=native)
+add_compile_options(-march=native -Wall -Wextra -Werror)
 if (CMAKE_BUILD_TYPE STREQUAL "Debug")
     add_compile_options(-O0 -g)
 else()
