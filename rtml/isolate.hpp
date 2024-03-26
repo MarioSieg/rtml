@@ -74,20 +74,20 @@ namespace rtml {
 
         template <typename T> requires is_dtype<T>
         [[nodiscard]] auto new_tensor(
-            std::initializer_list<const dim> dims,
+            std::initializer_list<const dim> shape,
             tensor<T>* slice = nullptr,
             std::size_t slice_offset = 0
         ) -> tensor<T>* {
-            return m_pool.alloc<tensor<T>>(*this, dims, slice, slice_offset);
+            return m_pool.alloc<tensor<T>>(*this, shape, slice, slice_offset);
         }
 
         template <typename T> requires is_dtype<T>
         [[nodiscard]] auto new_tensor(
-            std::span<const dim> dims,
+            std::span<const dim> shape,
             tensor<T>* slice = nullptr,
             std::size_t slice_offset = 0
         ) -> tensor<T>* {
-            return m_pool.alloc<tensor<T>>(*this, dims, slice, slice_offset);
+            return m_pool.alloc<tensor<T>>(*this, shape, slice, slice_offset);
         }
 
         isolate(const isolate&) = delete;

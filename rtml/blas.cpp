@@ -122,13 +122,13 @@ namespace rtml::blas {
         std::uint8_t* const b_r {r.ptr()};                              // Data base ptr
         const std::uint8_t* const b_x {x.ptr()};                        // Data base ptr
         const std::uint8_t* const b_y {y.ptr()};                        // Data base ptr
-        const auto [x_d0, x_d1, x_d2, x_d3] {x.dims()};                 // Dimensions of x
+        const auto [x_d0, x_d1, x_d2, x_d3] {x.shape()};                 // Dimensions of x
         const auto [x_s0, x_s1, x_s2, x_s3] {x.strides()};              // Strides of x
-        const auto [y_d0, y_d1, y_d2, y_d3] {y.dims()};                 // Dimensions of y
+        const auto [y_d0, y_d1, y_d2, y_d3] {y.shape()};                 // Dimensions of y
         const auto [y_s0, y_s1, y_s2, y_s3] {y.strides()};              // Strides of y
-        const auto [r_d0, r_d1, r_d2, r_d3] {r.dims()};                 // Dimensions of r
+        const auto [r_d0, r_d1, r_d2, r_d3] {r.shape()};                 // Dimensions of r
         const auto [r_s0, r_s1, r_s2, r_s3] {r.strides()};              // Strides of r
-        const dim rc {r.row_count()};                                   // Row count (number of columns in first dim): r.dims()[0]
+        const dim rc {r.row_count()};                                   // Row count (number of columns in first dim): r.shape()[0]
         const dim tidx {ctx.thread_idx};                                // Current thread index
         const dim tc {ctx.num_threads};                                 // Current thread count
         const dim rpt {(rc + tc - 1)/tc};                               // Rows per thread
@@ -246,11 +246,11 @@ namespace rtml::blas {
         std::uint8_t* const b_r {r.ptr()};                              // Data base ptr
         const std::uint8_t* const b_x {x.ptr()};                        // Data base ptr
         const std::uint8_t* const b_y {y.ptr()};                        // Data base ptr
-        const auto [x_d0, x_d1, x_d2, x_d3] {x.dims()};                 // Dimensions of x
+        const auto [x_d0, x_d1, x_d2, x_d3] {x.shape()};                 // Dimensions of x
         const auto [x_s0, x_s1, x_s2, x_s3] {x.strides()};              // Strides of x
-        [[maybe_unused]] const auto [y_d0, y_d1, y_d2, y_d3] {y.dims()};                 // Dimensions of y
+        [[maybe_unused]] const auto [y_d0, y_d1, y_d2, y_d3] {y.shape()};                 // Dimensions of y
         const auto [y_s0, y_s1, y_s2, y_s3] {y.strides()};              // Strides of y
-        const auto [r_d0, r_d1, r_d2, r_d3] {r.dims()};                 // Dimensions of r
+        const auto [r_d0, r_d1, r_d2, r_d3] {r.shape()};                 // Dimensions of r
         const auto [r_s0, r_s1, r_s2, r_s3] {r.strides()};              // Strides of r
         for (dim i3 {}; i3 < r_d3; ++i3) {
             for (dim i2 {}; i2 < r_d2; ++i2) {
@@ -299,11 +299,11 @@ namespace rtml::blas {
         std::uint8_t* const b_r {r.ptr()};                              // Data base ptr
         const std::uint8_t* const b_x {x.ptr()};                        // Data base ptr
         const std::uint8_t* const b_y {y.ptr()};                        // Data base ptr
-        const auto [x_d0, x_d1, x_d2, x_d3] {x.dims()};                 // Dimensions of x
+        const auto [x_d0, x_d1, x_d2, x_d3] {x.shape()};                 // Dimensions of x
         const auto [x_s0, x_s1, x_s2, x_s3] {x.strides()};              // Strides of x
-        const auto [y_d0, y_d1, y_d2, y_d3] {y.dims()};                 // Dimensions of y
+        const auto [y_d0, y_d1, y_d2, y_d3] {y.shape()};                 // Dimensions of y
         const auto [y_s0, y_s1, y_s2, y_s3] {y.strides()};              // Strides of y
-        const auto [r_d0, r_d1, r_d2, r_d3] {r.dims()};                 // Dimensions of r
+        const auto [r_d0, r_d1, r_d2, r_d3] {r.shape()};                 // Dimensions of r
         const auto [r_s0, r_s1, r_s2, r_s3] {r.strides()};              // Strides of r
         const dim tidx {ctx.thread_idx};                                // Current thread index
         const dim tc {ctx.num_threads};                                 // Current thread count

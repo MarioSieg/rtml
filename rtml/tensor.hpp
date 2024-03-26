@@ -44,9 +44,9 @@ namespace rtml {
         ~tensor() = default;
 
         [[nodiscard]] auto size() const noexcept -> std::size_t { return m_datasize; }
-        [[nodiscard]] auto dim_count() const noexcept -> std::uint32_t { return m_num_dims; }
-        [[nodiscard]] auto dims() const noexcept -> const std::array<dim, k_max_dims>& { return m_shape; }
-        [[nodiscard]] auto used_dims() const noexcept -> std::span<const dim> { return {m_shape.cbegin(), m_num_dims}; }
+        [[nodiscard]] auto rank() const noexcept -> std::uint32_t { return m_rank; }
+        [[nodiscard]] auto shape() const noexcept -> const std::array<dim, k_max_dims>& { return m_shape; }
+        [[nodiscard]] auto used_dims() const noexcept -> std::span<const dim> { return {m_shape.cbegin(), m_rank}; }
         [[nodiscard]] auto strides() const noexcept -> const std::array<dim, k_max_dims>& { return m_strides; }
         [[nodiscard]] auto slice_base() const noexcept -> tensor* { return m_slice; }
         [[nodiscard]] auto slice_offset() const noexcept -> std::size_t { return m_slice_offset; }
@@ -73,8 +73,8 @@ namespace rtml {
         [[nodiscard]] auto is_shape_eq(const tensor* const other) const noexcept -> bool {
             if (this == other) [[unlikely]]
                 return true;
-            if (m_num_dims == other->m_num_dims) [[likely]]
-                return std::equal(m_shape.cbegin(), m_shape.cbegin()+m_num_dims, other->m_shape.cbegin());
+            if (m_rank == other->m_rank) [[likely]]
+                return std::equal(m_shape.cbegin(), m_shape.cbegin()+m_rank, other->m_shape.cbegin());
             return false;
         }
         [[nodiscard]] auto is_matmul_compatible(const tensor* const other) const noexcept -> bool {
@@ -241,7 +241,7 @@ namespace rtml {
                 m_name.data(),
                 m_name[0] ? ": " : "",
                 dtype_traits<S>::k_name,
-                m_num_dims,
+                m_rank,
                 m_shape[0],
                 m_shape[1],
                 m_shape[2],
@@ -278,21 +278,24 @@ namespace rtml {
 
         tensor(
              isolate& ctx,
-             std::span<const dim> dims,
+             std::span<const dim> shape,
              tensor* slice,
              std::size_t slice_offset
         ) noexcept : m_ctx{ctx} {
-            assert(!dims.empty() && dims.size() <= k_max_dims);
+            rtml_assert(!shape.empty() && shape.size() <= k_max_dims, "Invalid tensor shape must be within 1-{} dimensions", k_max_dims);
             if (slice && slice->m_slice) { // Account for if slice itself is also a slice
                 slice_offset += slice->m_slice_offset;
                 slice = slice->m_slice;
             }
             std::size_t datasize {dtype_traits<S>::k_size}; // Tensor data size to allocate
-            for (std::size_t i {0}; i < dims.size(); ++i) { // Accumulate total data size
-                assert(dims[i] > 0); // Check if dimensions are valid
-                datasize *= dims[i];
+            constexpr auto size_lim {std::numeric_limits<std::size_t>::max()};
+            for (std::size_t i {0}; i < shape.size(); ++i) { // Accumulate total data size
+                const std::size_t lim {size_lim / datasize};
+                rtml_dassert(shape[i] > 0, "Invalid tensor shape dimension {}, must be > 0", shape[i]);
+                rtml_dassert(static_cast<std::size_t>(shape[i]) <= lim, "Tensor size exceeds maximum limit");
+                datasize *= static_cast<dim>(std::min<std::size_t>(lim, std::max<dim>(shape[i], 1)));
             }
-            assert(!slice || datasize+slice_offset <= slice->m_datasize); // Check if slice has enough space
+            rtml_assert(!slice || datasize+slice_offset <= slice->m_datasize, "Slice tensor out of range"); // Check if slice has enough space
             static constexpr bool k_align_scalar = false; // Aligned data address to scalar alignment?
             m_x.u8 = slice
                 ? slice->m_x.u8+slice_offset
@@ -300,20 +303,20 @@ namespace rtml {
                     ? m_ctx.pool().alloc_raw(datasize, dtype_traits<S>::k_align)
                     : m_ctx.pool().alloc_raw(datasize)); // Point into slice data (if slice) or allocate new data from pool.
             m_datasize = datasize;
-            m_num_dims = dims.size();
+            m_rank = shape.size();
             m_slice = slice;
             m_slice_offset = slice_offset;
             std::ranges::fill(m_shape.begin(), m_shape.end(), 1); // Splat identity dimensions
-            std::ranges::copy(dims.begin(), dims.end(), m_shape.begin()); // Copy dimensions
+            std::ranges::copy(shape.begin(), shape.end(), m_shape.begin()); // Copy dimensions
             m_strides[0] = static_cast<dim>(dtype_traits<S>::k_size);
             for (std::size_t i {1}; i < k_max_dims; ++i) // Compute strides
-                m_strides[i] = m_strides[i-1]*m_shape[i-1];
+                m_strides[i] = m_strides[i-1] * m_shape[i-1];
         }
 
         isolate& m_ctx; // Associated isolate
         std::array<char, k_max_name> m_name {}; // Tensor name - cannot use std::string because we must be trivially destructable
         std::size_t m_datasize {}; // Tensor data size in bytes
-        std::uint32_t m_num_dims {}; // Number of dimensions (1-k_max_dims)
+        std::uint32_t m_rank {}; // Number of dimensions (1-k_max_dims)
         enum opcode m_op {opcode::nop}; // Operation code
         std::array<dim, k_max_dims> m_shape {}; // 4D dimensions - tensor shape
         std::array<dim, k_max_dims> m_strides {}; // 4D byte strides
