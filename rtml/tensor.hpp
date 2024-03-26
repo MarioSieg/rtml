@@ -27,7 +27,7 @@ namespace rtml {
 
     constexpr bool k_clone_set_name {true}; // If true, some operations like clone or slice add this to the tensor's name.
 
-    static constexpr dim k_max_dims {4};
+    constexpr dim k_max_dims {4};
 
     template <const std::size_t dtype_size, const dim lim = k_max_dims>
         requires (dtype_size > 0) && (dtype_size <= 4) && (lim > 0 && (lim&-255) == 0)
