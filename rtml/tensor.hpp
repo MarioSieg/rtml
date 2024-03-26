@@ -48,18 +48,20 @@ namespace rtml {
         [[nodiscard]] constexpr auto used_dims() const noexcept -> std::span<const dim> { return {m_shape.cbegin(), m_rank}; }
         [[nodiscard]] constexpr auto strides() const noexcept -> const std::array<dim, lim>& { return m_strides; }
         [[nodiscard]] constexpr auto is_dense() const noexcept -> bool {
-            static_assert(lim == 4);
-            return
-                m_strides[0] == dtype_size && // Check if strides are contiguous
-                m_strides[1] == m_strides[0] * m_shape[0] &&
-                m_strides[2] == m_strides[1] * m_shape[1] &&
-                m_strides[3] == m_strides[2] * m_shape[2];
+            if (m_strides[0] != dtype_size)
+                return false;
+            for (dim i {1}; i < lim; ++i)
+                if (m_strides[i] != m_strides[i - 1] * m_shape[i - 1])
+                    return false;
+            return true;
         }
         [[nodiscard]] constexpr auto is_dense_except_dim1() const noexcept -> bool {
-            return
-            m_strides[0] == dtype_size && // Check if strides are contiguous
-            m_strides[2] == m_strides[1] * m_shape[1] &&
-            m_strides[3] == m_strides[2] * m_shape[2];
+            if (m_strides[0] != dtype_size)
+                return false;
+            for (dim i {2}; i < lim; ++i)
+                if (m_strides[i] != m_strides[i - 1] * m_shape[i - 1])
+                    return false;
+            return true;
         }
         [[nodiscard]] constexpr auto operator == (const fixed_shape& other) const noexcept -> bool {
             if (this == &other)
@@ -73,7 +75,7 @@ namespace rtml {
         }
         [[nodiscard]] constexpr auto is_matmul_compatible(const fixed_shape& other) const noexcept -> bool {
             static_assert(lim == 4);
-            return m_shape[0] == other.m_shape[0] && // Check if matrix multiplication is compatible
+            return m_shape[0] == other.m_shape[0] &&
                 other.m_shape[2] % m_shape[2] == 0 &&
                 other.m_shape[3] % m_shape[3] == 0;
         }
@@ -81,14 +83,12 @@ namespace rtml {
             return m_strides[0] > m_strides[1];
         }
         [[nodiscard]] constexpr auto is_permuted() const noexcept -> bool {
-            static_assert(lim == 4);
-            return
-                m_strides[0] > m_strides[1] ||
-                m_strides[1] > m_strides[2] ||
-                m_strides[2] > m_strides[3];
+            for (dim i {}; i < lim-1; ++i)
+                if (m_strides[i] > m_strides[i + 1])
+                    return true;
+            return false;
         }
         [[nodiscard]] constexpr auto can_repeat(const fixed_shape& other) const noexcept -> bool {
-            static_assert(lim == 4);
             for (std::size_t i {}; i < lim; ++i)
                 if (other.m_shape[i] % m_shape[i] != 0)
                     return false;
