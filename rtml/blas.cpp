@@ -117,18 +117,18 @@ namespace rtml::blas {
         V_OP&& v_op,        // Vector OP
         S_OP&& s_op         // Scalar OP
     ) noexcept -> void {
-        rtml_dassert1(y.can_repeat(&x));                                       // Debug only verification - ! must be checked by validation function
-        rtml_dassert1(x.is_shape_eq(&r));                                      // Debug only verification - ! must be checked by validation function
+        rtml_dassert1(y.shape().can_repeat(x.shape()));                                       // Debug only verification - ! must be checked by validation function
+        rtml_dassert1(x.shape() == r.shape());                                      // Debug only verification - ! must be checked by validation function
         std::uint8_t* const b_r {r.ptr()};                              // Data base ptr
         const std::uint8_t* const b_x {x.ptr()};                        // Data base ptr
         const std::uint8_t* const b_y {y.ptr()};                        // Data base ptr
-        const auto [x_d0, x_d1, x_d2, x_d3] {x.shape()};                 // Dimensions of x
-        const auto [x_s0, x_s1, x_s2, x_s3] {x.strides()};              // Strides of x
-        const auto [y_d0, y_d1, y_d2, y_d3] {y.shape()};                 // Dimensions of y
-        const auto [y_s0, y_s1, y_s2, y_s3] {y.strides()};              // Strides of y
-        const auto [r_d0, r_d1, r_d2, r_d3] {r.shape()};                 // Dimensions of r
-        const auto [r_s0, r_s1, r_s2, r_s3] {r.strides()};              // Strides of r
-        const dim rc {r.row_count()};                                   // Row count (number of columns in first dim): r.shape()[0]
+        const auto [x_d0, x_d1, x_d2, x_d3] {x.shape().dims()};                 // Dimensions of x
+        const auto [x_s0, x_s1, x_s2, x_s3] {x.shape().strides()};              // Strides of x
+        const auto [y_d0, y_d1, y_d2, y_d3] {y.shape().dims()};                 // Dimensions of y
+        const auto [y_s0, y_s1, y_s2, y_s3] {y.shape().strides()};              // Strides of y
+        const auto [r_d0, r_d1, r_d2, r_d3] {r.shape().dims()};                 // Dimensions of r
+        const auto [r_s0, r_s1, r_s2, r_s3] {r.shape().strides()};              // Strides of r
+        const dim rc {r.shape().row_count()};                                   // Row count (number of columns in first dim): r.shape()[0]
         const dim tidx {ctx.thread_idx};                                // Current thread index
         const dim tc {ctx.num_threads};                                 // Current thread count
         const dim rpt {(rc + tc - 1)/tc};                               // Rows per thread
@@ -176,7 +176,7 @@ namespace rtml::blas {
         V_OP&& v_op,        // Vector OP
         S_OP&& s_op         // Scalar OP
     ) noexcept -> void {
-        if (y.strides()[0] == dtype_traits<S>::k_size) { // Dense or sparse kernel? Sparse means non-contiguous memory layout
+        if (y.shape().strides()[0] == dtype_traits<S>::k_size) { // Dense or sparse kernel? Sparse means non-contiguous memory layout
             blas_tensor_gen_op_binary_kernel<kernel_density::dense, S, V_OP, S_OP>(
                 ctx,
                 r,
@@ -207,13 +207,13 @@ namespace rtml::blas {
         V_OP&& v_op // Vector OP
     ) noexcept -> void {
         rtml_dassert1(ctx.thread_idx == 0);
-        rtml_dassert1(x.is_shape_eq(&r)); // no broadcasting support
-        rtml_dassert1(r.strides()[0] == dtype_traits<S>::k_size);
-        rtml_dassert1(x.strides()[0] == dtype_traits<S>::k_size);
-        const dim rows {x.row_count()};
-        const dim cols {x.col_count()};
-        const dim r_s1 {r.strides()[1]};
-        const dim x_s1 {x.strides()[1]};
+        rtml_dassert1(x.shape() == r.shape()); // no broadcasting support
+        rtml_dassert1(r.shape().strides()[0] == dtype_traits<S>::k_size);
+        rtml_dassert1(x.shape().strides()[0] == dtype_traits<S>::k_size);
+        const dim rows {x.shape().row_count()};
+        const dim cols {x.shape().col_count()};
+        const dim r_s1 {r.shape().strides()[1]};
+        const dim x_s1 {x.shape().strides()[1]};
         for (dim i {}; i < rows; ++i) {
             v_op(
                 cols,
@@ -238,20 +238,20 @@ namespace rtml::blas {
         const tensor<>& y  // Y = src 1
     ) noexcept -> void {
         static_assert(std::is_same_v<std::decay_t<decltype(r)>::dtype, dtypes::f32>);
-        rtml_dassert1(x.is_matmul_compatible(&y));
-        rtml_dassert1(!x.is_transposed());
+        rtml_dassert1(x.shape().is_matmul_compatible(y.shape()));
+        rtml_dassert1(!x.shape().is_transposed());
         static constexpr dim block_x {16};
         static constexpr dim block_y {16};
         static_assert(block_x == block_y);
         std::uint8_t* const b_r {r.ptr()};                              // Data base ptr
         const std::uint8_t* const b_x {x.ptr()};                        // Data base ptr
         const std::uint8_t* const b_y {y.ptr()};                        // Data base ptr
-        const auto [x_d0, x_d1, x_d2, x_d3] {x.shape()};                 // Dimensions of x
-        const auto [x_s0, x_s1, x_s2, x_s3] {x.strides()};              // Strides of x
-        [[maybe_unused]] const auto [y_d0, y_d1, y_d2, y_d3] {y.shape()};                 // Dimensions of y
-        const auto [y_s0, y_s1, y_s2, y_s3] {y.strides()};              // Strides of y
-        const auto [r_d0, r_d1, r_d2, r_d3] {r.shape()};                 // Dimensions of r
-        const auto [r_s0, r_s1, r_s2, r_s3] {r.strides()};              // Strides of r
+        const auto [x_d0, x_d1, x_d2, x_d3] {x.shape().dims()};                 // Dimensions of x
+        const auto [x_s0, x_s1, x_s2, x_s3] {x.shape().strides()};              // Strides of x
+        [[maybe_unused]] const auto [y_d0, y_d1, y_d2, y_d3] {y.shape().dims()};                 // Dimensions of y
+        const auto [y_s0, y_s1, y_s2, y_s3] {y.shape().strides()};              // Strides of y
+        const auto [r_d0, r_d1, r_d2, r_d3] {r.shape().dims()};                 // Dimensions of r
+        const auto [r_s0, r_s1, r_s2, r_s3] {r.shape().strides()};              // Strides of r
         for (dim i3 {}; i3 < r_d3; ++i3) {
             for (dim i2 {}; i2 < r_d2; ++i2) {
                 for (dim i1 {}; i1 < r_d1; ++i1) {
@@ -291,23 +291,23 @@ namespace rtml::blas {
         const tensor<>& y  // Y = src 1
     ) noexcept -> void {
         static_assert(std::is_same_v<std::decay_t<decltype(r)>::dtype, dtypes::f32>);
-        rtml_dassert1(x.is_matmul_compatible(&y));
-        rtml_dassert1(!x.is_transposed());
+        rtml_dassert1(x.shape().is_matmul_compatible(y.shape()));
+        rtml_dassert1(!x.shape().is_transposed());
         static constexpr dim block_x {16};
         static constexpr dim block_y {16};
         static_assert(block_x == block_y);
         std::uint8_t* const b_r {r.ptr()};                              // Data base ptr
         const std::uint8_t* const b_x {x.ptr()};                        // Data base ptr
         const std::uint8_t* const b_y {y.ptr()};                        // Data base ptr
-        const auto [x_d0, x_d1, x_d2, x_d3] {x.shape()};                 // Dimensions of x
-        const auto [x_s0, x_s1, x_s2, x_s3] {x.strides()};              // Strides of x
-        const auto [y_d0, y_d1, y_d2, y_d3] {y.shape()};                 // Dimensions of y
-        const auto [y_s0, y_s1, y_s2, y_s3] {y.strides()};              // Strides of y
-        const auto [r_d0, r_d1, r_d2, r_d3] {r.shape()};                 // Dimensions of r
-        const auto [r_s0, r_s1, r_s2, r_s3] {r.strides()};              // Strides of r
+        const auto [x_d0, x_d1, x_d2, x_d3] {x.shape().dims()};                 // Dimensions of x
+        const auto [x_s0, x_s1, x_s2, x_s3] {x.shape().strides()};              // Strides of x
+        const auto [y_d0, y_d1, y_d2, y_d3] {y.shape().dims()};                 // Dimensions of y
+        const auto [y_s0, y_s1, y_s2, y_s3] {y.shape().strides()};              // Strides of y
+        const auto [r_d0, r_d1, r_d2, r_d3] {r.shape().dims()};                 // Dimensions of r
+        const auto [r_s0, r_s1, r_s2, r_s3] {r.shape().strides()};              // Strides of r
         const dim tidx {ctx.thread_idx};                                // Current thread index
         const dim tc {ctx.num_threads};                                 // Current thread count
-        const bool y_dense {y.is_dense()};
+        const bool y_dense {y.shape().is_dense()};
         rtml_dassert1(r_d0 == x_d1);
         rtml_dassert1(r_d1 == y_d1);
         rtml_dassert1(r_d2 == y_d2);

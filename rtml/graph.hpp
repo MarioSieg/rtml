@@ -56,9 +56,9 @@ namespace rtml::graph {
             const auto num_operands {static_cast<std::size_t>(r->opcode())};
             rtml_verify(k_operands[num_operands] == src.size(), "Number of operands mismatch, expected {} got {}", k_operands[num_operands], src.size());
             rtml_verify(src[0], "Source tensor is null");
-            rtml_verify(src[0]->is_dense_except_dim1(), "Source tensor is not dense except dim1");
-            rtml_verify(r->is_dense_except_dim1(), "Result tensor is not dense except dim1");
-            rtml_verify(r->is_shape_eq(src[0]), "Result tensor shape mismatch");
+            rtml_verify(src[0]->shape().is_dense_except_dim1(), "Source tensor is not dense except dim1");
+            rtml_verify(r->shape().is_dense_except_dim1(), "Result tensor is not dense except dim1");
+            rtml_verify(r->shape() == src[0]->shape(), "Result tensor shape mismatch");
             return true;
         }
 
@@ -72,10 +72,10 @@ namespace rtml::graph {
             rtml_verify(k_operands[num_operands] == src.size(), "Number of operands mismatch, expected {} got {}", k_operands[num_operands], src.size());
             rtml_verify(src[0], "Source tensor 0 is null");
             rtml_verify(src[1], "Source tensor 1 is null");
-            rtml_verify(src[0]->strides()[0] == dtype_traits<S>::k_size, "Source tensor 0 stride mismatch");
-            rtml_verify(r->strides()[0] == dtype_traits<S>::k_size, "Result tensor stride mismatch");
-            rtml_verify(src[1]->can_repeat(src[0]), "Source tensor 1 cannot repeat source tensor 0");
-            rtml_verify(src[0]->is_shape_eq(r), "Source tensor 0 shape mismatch");
+            rtml_verify(src[0]->shape().strides()[0] == dtype_traits<S>::k_size, "Source tensor 0 stride mismatch");
+            rtml_verify(r->shape().strides()[0] == dtype_traits<S>::k_size, "Result tensor stride mismatch");
+            rtml_verify(src[1]->shape().can_repeat(src[0]->shape()), "Source tensor 1 cannot repeat source tensor 0");
+            rtml_verify(src[0]->shape() == r->shape(), "Source tensor 0 shape mismatch");
             return true;
         }
 
