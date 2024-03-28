@@ -24,6 +24,7 @@ namespace rtml {
     }
 
     pool::~pool() {
+        rtml_log_info("Destroying linear memory pool, {:.01f} MiB allocated, {} allocs",  static_cast<double>(bytes_allocated())/std::pow(1024.0, 2.0), m_num_allocs);
         std::free(m_buf);
     }
 
@@ -100,10 +101,10 @@ namespace rtml {
     isolate::isolate(std::string&& name, compute_device device, const std::size_t pool_mem)
         : m_name{std::move(name)}, m_device{device}, m_pool{pool_mem} {
         rtml_log_info(
-            "Creating isolate '{}', Device: '{}', Pool memory: {:.01f} GiB",
+            "Creating isolate '{}', Device: '{}', Pool memory: {:.01f} MiB",
             m_name.c_str(),
             isolate::k_compute_device_names[static_cast<std::size_t>(m_device)],
-            static_cast<double>(pool_mem)/std::pow(1024.0, 3.0)
+            static_cast<double>(pool_mem)/std::pow(1024.0, 2.0)
         );
     }
 }

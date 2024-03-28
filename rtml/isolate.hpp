@@ -5,7 +5,6 @@
 #pragma once
 
 #include "base.hpp"
-#include "tensor_base.hpp"
 
 namespace rtml {
     template <typename T>
@@ -72,13 +71,17 @@ namespace rtml {
             std::size_t pool_mem
         ) -> std::shared_ptr<isolate>;
 
-        template <typename T> requires is_dtype<T>
+        template <typename S> requires is_dtype<S>
         [[nodiscard]] auto new_tensor(
             std::initializer_list<const dim> shape,
-            tensor<T>* slice = nullptr,
+            std::initializer_list<const S> data = {},
+            tensor<S>* slice = nullptr,
             std::size_t slice_offset = 0
-        ) -> tensor<T>* {
-            return m_pool.alloc<tensor<T>>(*this, shape, slice, slice_offset);
+        ) -> tensor<S>* {
+            auto* t {m_pool.alloc<tensor<S>>(*this, shape, slice, slice_offset)};
+            if (data.size() > 0)
+                t->fill_data(std::span<const S>{data.begin(), data.end()});
+            return t;
         }
 
         template <typename T> requires is_dtype<T>

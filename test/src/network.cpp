@@ -10,21 +10,25 @@
 using namespace rtml;
 
 TEST(net, with_ass) {
-    std::shared_ptr ctx {isolate::create("alex", isolate::compute_device::cpu, 0x1000000)};
+    std::shared_ptr ctx {isolate::create("alex", isolate::compute_device::cpu, 16_gib)};
     net xor_network {*ctx, {2, 3, 1}};
-    constexpr std::array<dtypes::f32, 2> inputs_data {
-        0.0f, 1.0f
+    std::array<tensor<>* const, 4> inputs_data {
+        ctx->new_tensor({2}, {0.0f, 0.0f}),
+        ctx->new_tensor({2}, {0.0f, 1.0f}),
+        ctx->new_tensor({2}, {1.0f, 0.0f}),
+        ctx->new_tensor({2}, {1.0f, 1.0f}),
     };
-    constexpr std::array<dtypes::f32, 4> targets_data {
-        0.0f,
-        1.0f,
-        0.0f,
-        0.0f
+    std::array<tensor<>* const, 4> targets_data {
+        ctx->new_tensor({1}, {0.0f}),
+        ctx->new_tensor({1}, {1.0f}),
+        ctx->new_tensor({1}, {1.0f}),
+        ctx->new_tensor({1}, {0.0f}),
     };
+    static_assert(inputs_data.size() == targets_data.size());
 
-    for (auto&& x : xor_network.forward_propagate(inputs_data)) {
-        rtml_log_info("{}", x);
+    xor_network.train(inputs_data, targets_data, 10000, 0.1f);
+
+    for (std::size_t i {}; i < inputs_data.size(); ++i) {
+        rtml_log_info("[{} ^ {}] = {}", inputs_data[i]->data()[0], inputs_data[i]->data()[1], xor_network.forward_propagate(inputs_data[i])->data()[0]);
     }
-
-    //xor_network.train(inputs, targets, 100000, 1.0f);
 }

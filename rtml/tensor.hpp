@@ -10,7 +10,7 @@
 #include <random>
 #include <span>
 
-#include "tensor_base.hpp"
+#include "base.hpp"
 #include "blas.hpp"
 
 #include <spdlog/spdlog.h>
@@ -25,7 +25,7 @@ namespace rtml {
         return result;
     }
 
-    constexpr bool k_clone_set_name {true}; // If true, some operations like clone or slice add this to the tensor's name.
+    constexpr bool k_clone_set_name {false}; // If true, some operations like clone or slice add this to the tensor's name.
 
     constexpr dim k_max_dims {4};
 
@@ -47,6 +47,15 @@ namespace rtml {
         [[nodiscard]] constexpr auto dims() const noexcept -> const std::array<dim, lim>& { return m_shape; }
         [[nodiscard]] constexpr auto used_dims() const noexcept -> std::span<const dim> { return {m_shape.cbegin(), m_rank}; }
         [[nodiscard]] constexpr auto strides() const noexcept -> const std::array<dim, lim>& { return m_strides; }
+        [[nodiscard]] constexpr auto is_scalar() const noexcept -> bool {
+            return std::all_of(m_shape.cbegin(), m_shape.cend(), [](const dim dimension) noexcept -> bool { return dimension == 1; });
+        }
+        [[nodiscard]] constexpr auto is_vector() const noexcept -> bool {
+            return std::all_of(m_shape.cbegin()+1, m_shape.cend(), [](const dim dimension) noexcept -> bool { return dimension == 1; });
+        }
+        [[nodiscard]] constexpr auto is_matrix() const noexcept -> bool {
+            return std::all_of(m_shape.cbegin()+2, m_shape.cend(), [](const dim dimension) noexcept -> bool { return dimension == 1; });
+        }
         [[nodiscard]] constexpr auto is_dense() const noexcept -> bool {
             if (m_strides[0] != dtype_size)
                 return false;
@@ -62,16 +71,6 @@ namespace rtml {
                 if (m_strides[i] != m_strides[i - 1] * m_shape[i - 1])
                     return false;
             return true;
-        }
-        [[nodiscard]] constexpr auto operator == (const fixed_shape& other) const noexcept -> bool {
-            if (this == &other)
-                return true;
-            if (m_rank == other.m_rank)
-                return std::ranges::equal(m_shape, other.m_shape);
-            return false;
-        }
-        [[nodiscard]] constexpr auto operator != (const fixed_shape& other) const noexcept -> bool {
-            return !(*this == other);
         }
         [[nodiscard]] constexpr auto is_matmul_compatible(const fixed_shape& other) const noexcept -> bool {
             return m_shape[1] == other.m_shape[0];
@@ -90,6 +89,9 @@ namespace rtml {
                 if (other.m_shape[i] % m_shape[i] != 0)
                     return false;
             return true;
+        }
+        [[nodiscard]] constexpr auto can_repeat_rows(const fixed_shape& other) const noexcept -> bool {
+            return m_shape[0] == other.m_shape[0] && can_repeat(other);
         }
         [[nodiscard]] constexpr auto row_count() const noexcept -> dim {
             return std::accumulate(m_shape.cbegin()+1, m_shape.cend(), 1, std::multiplies());
@@ -122,6 +124,16 @@ namespace rtml {
             m_shape[1] = other.m_shape[0];
             m_strides[0] = other.m_strides[1];
             m_strides[1] = other.m_strides[0];
+        }
+        [[nodiscard]] constexpr auto operator == (const fixed_shape& other) const noexcept -> bool {
+            if (this == &other)
+                return true;
+            if (m_rank == other.m_rank)
+                return std::ranges::equal(m_shape, other.m_shape);
+            return false;
+        }
+        [[nodiscard]] constexpr auto operator != (const fixed_shape& other) const noexcept -> bool {
+            return !(*this == other);
         }
 
     private:
@@ -224,39 +236,52 @@ namespace rtml {
         }
 
         [[nodiscard]] auto add(const tensor* other) noexcept -> tensor* {
-            blas::compute_ctx ctx {};
+            rtml_assert1(validators::validate_binary_op(this, this, other));
+            constexpr blas::compute_ctx ctx {};
             blas::add(ctx, *this, *this, *other);
             return this;
         }
 
         [[nodiscard]] auto sub(const tensor* other) noexcept -> tensor* {
-            blas::compute_ctx ctx {};
+            rtml_assert1(validators::validate_binary_op(this, this, other));
+            constexpr blas::compute_ctx ctx {};
             blas::sub(ctx, *this, *this, *other);
             return this;
         }
 
         [[nodiscard]] auto mul(const tensor* other) noexcept -> tensor* {
-            blas::compute_ctx ctx {};
+            rtml_assert1(validators::validate_binary_op(this, this, other));
+            constexpr blas::compute_ctx ctx {};
             blas::mul(ctx, *this, *this, *other);
             return this;
         }
 
         [[nodiscard]] auto div(const tensor* other) noexcept -> tensor* {
-            blas::compute_ctx ctx {};
+            rtml_assert1(validators::validate_binary_op(this, this, other));
+            constexpr blas::compute_ctx ctx {};
             blas::div(ctx, *this, *this, *other);
             return this;
         }
 
         [[nodiscard]] auto matmul_clone(const tensor* other) noexcept -> tensor* {
-            blas::compute_ctx ctx {};
+            rtml_assert1(validators::validate_matmul(this, this, other));
+            constexpr blas::compute_ctx ctx {};
             tensor* const r {m_ctx.new_tensor<S>({m_shape.dims()[0], other->m_shape.dims()[1]})};
             blas::matmul(ctx, *r, *this, *other);
             return r;
         }
 
         [[nodiscard]] auto sigmoid() noexcept -> tensor* {
-            blas::compute_ctx ctx {};
+            rtml_assert1(validators::validate_unary_op(this, this));
+            constexpr blas::compute_ctx ctx {};
             blas::sigmoid(ctx, *this, *this);
+            return this;
+        }
+
+        [[nodiscard]] auto sigmoid_derivative() noexcept -> tensor* {
+            rtml_assert1(validators::validate_unary_op(this, this));
+            constexpr blas::compute_ctx ctx {};
+            blas::sigmoid_derivative(ctx, *this, *this);
             return this;
         }
 

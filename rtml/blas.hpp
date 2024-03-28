@@ -5,7 +5,7 @@
 
 #pragma once
 
-#include "tensor_base.hpp"
+#include "base.hpp"
 
 namespace rtml::blas {
     // Context for compute operations
@@ -26,6 +26,13 @@ namespace rtml::blas {
     extern auto relu(const compute_ctx& ctx, tensor<dtypes::f32>& r, const tensor<dtypes::f32>& x) noexcept -> void;    // r = relu(x)
     extern auto gelu(const compute_ctx& ctx, tensor<dtypes::f32>& r, const tensor<dtypes::f32>& x) noexcept -> void;    // r = gelu(x)
     extern auto silu(const compute_ctx& ctx, tensor<dtypes::f32>& r, const tensor<dtypes::f32>& x) noexcept -> void;    // r = silu(x)
+
+    extern auto softmax_derivative(const compute_ctx& ctx, tensor<dtypes::f32>& r, const tensor<dtypes::f32>& x) noexcept -> void; // r = softmax(x)
+    extern auto sigmoid_derivative(const compute_ctx& ctx, tensor<dtypes::f32>& r, const tensor<dtypes::f32>& x) noexcept -> void; // r = sigmoid(x)
+    extern auto tanh_derivative(const compute_ctx& ctx, tensor<dtypes::f32>& r, const tensor<dtypes::f32>& x) noexcept -> void;    // r = tanh(x)
+    extern auto relu_derivative(const compute_ctx& ctx, tensor<dtypes::f32>& r, const tensor<dtypes::f32>& x) noexcept -> void;    // r = relu(x)
+    extern auto gelu_derivative(const compute_ctx& ctx, tensor<dtypes::f32>& r, const tensor<dtypes::f32>& x) noexcept -> void;    // r = gelu(x)
+    extern auto silu_derivative(const compute_ctx& ctx, tensor<dtypes::f32>& r, const tensor<dtypes::f32>& x) noexcept -> void;    // r = silu(x)
 
     // binary ops
 

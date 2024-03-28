@@ -41,6 +41,13 @@ namespace rtml::blas {
                 ov[i] = 1.0f / (1.0f + std::exp(-x[i]));
         }
         template <typename S> requires is_dtype<S>
+        static auto RTML_HOT sigmoid_derivative(const std::size_t n, S* const ov, const S* const x) noexcept -> void {
+            for (std::size_t i = 0; i < n; ++i) {
+                const S sig {1.0f / (1.0f + std::exp(-x[i]))};
+                ov[i] = sig * (1.0f - sig);
+            }
+        }
+        template <typename S> requires is_dtype<S>
         static auto RTML_HOT tanh(const std::size_t n, S* const ov, const S* const x) noexcept -> void {
             for (std::size_t i {}; i < n; ++i)
                 ov[i] = std::tanh(x[i]);
@@ -117,8 +124,8 @@ namespace rtml::blas {
         V_OP&& v_op,        // Vector OP
         S_OP&& s_op         // Scalar OP
     ) noexcept -> void {
-        rtml_dassert1(y.shape().can_repeat(x.shape()));                                       // Debug only verification - ! must be checked by validation function
-        rtml_dassert1(x.shape() == r.shape());                                      // Debug only verification - ! must be checked by validation function
+        //rtml_dassert1(y.shape().can_repeat_rows(x.shape()));  // Debug only verification - ! must be checked by validation function
+        rtml_dassert1(x.shape() == r.shape());                          // Debug only verification - ! must be checked by validation function
         std::uint8_t* const b_r {r.ptr()};                              // Data base ptr
         const std::uint8_t* const b_x {x.ptr()};                        // Data base ptr
         const std::uint8_t* const b_y {y.ptr()};                        // Data base ptr
@@ -239,7 +246,7 @@ namespace rtml::blas {
     ) noexcept -> void {
         static_assert(std::is_same_v<std::decay_t<decltype(r)>::dtype, dtypes::f32>);
         rtml_dassert1(x.shape().is_matmul_compatible(y.shape()));
-        rtml_dassert1(!x.shape().is_transposed());
+        //rtml_dassert1(!x.shape().is_transposed());
         static constexpr dim block_x {16};
         static constexpr dim block_y {16};
         static_assert(block_x == block_y);
@@ -418,6 +425,14 @@ namespace rtml::blas {
             std::decay_t<decltype(r)>::dtype,
             decltype(vec::silu<std::decay_t<decltype(r)>::dtype>)
         >(ctx, r, x, vec::silu);
+    }
+
+    auto sigmoid_derivative(const compute_ctx& ctx, tensor<dtypes::f32>& r, const tensor<dtypes::f32>& x) noexcept -> void {
+        blas_tensor_gen_op_unary
+        <
+            std::decay_t<decltype(r)>::dtype,
+            decltype(vec::sigmoid_derivative<std::decay_t<decltype(r)>::dtype>)
+        >(ctx, r, x, vec::sigmoid_derivative);
     }
 
     auto add(const compute_ctx& ctx, tensor<dtypes::f32>& r, const tensor<dtypes::f32>& x, const tensor<dtypes::f32>& y) noexcept -> void {

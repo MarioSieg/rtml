@@ -16,32 +16,44 @@ namespace rtml {
         build_forward_graph();
     }
 
-    auto net::forward_propagate(const std::span<const dtypes::f32> inputs) -> std::span<const dtypes::f32> {
-        tensor<>* current {m_ctx.new_tensor<dtypes::f32>({1, static_cast<dim>(inputs.size())})->transposed_clone()};
-        current->fill_data(inputs);
+    auto net::forward_propagate(tensor<>* const inputs) -> tensor<>* {
+        rtml_dassert1(inputs->shape().is_vector());
+        tensor<>* current {inputs->clone()};
         for (std::size_t i {}; i < m_layers.size()-1; ++i) {
             current = m_weights[i]->clone()->matmul_clone(current)->add(m_biases[i])->sigmoid();
             m_data.emplace_back(current);
         }
-        return current->transposed_clone()->data();
+        tensor<>* r {current->transposed_clone()};
+        rtml_dassert1(r->shape().is_scalar());
+        return r;
     }
 
-    auto net::backward_propagate([[maybe_unused]] tensor<>* outputs, [[maybe_unused]] tensor<>* targets) -> void {
-
+    auto net::backward_propagate(tensor<>* const outputs, tensor<>* const targets, const float learning_rate) -> void {
+        rtml_assert1(targets->shape().is_vector() && targets->shape().col_count() == m_layers.back());
+        rtml_assert1(outputs->shape().is_vector());
+        tensor<>* const parsed {outputs->clone()};
+        tensor<>* errors {targets->clone()->sub(parsed)};
+        tensor<>* gradients {parsed->clone()->sigmoid_derivative()};
+        for (std::size_t i {m_layers.size()-1}; i --> 0; ) {
+            gradients = gradients->mul(errors)->mul(gradients->isomorphic_clone()->fill(learning_rate));
+            m_weights[i] = m_weights[i]->clone()->add(gradients->matmul_clone(m_data[i]->transposed_clone()));
+            m_biases[i] = m_biases[i]->clone()->add(gradients);
+            errors = m_weights[i]->transposed_clone()->matmul_clone(errors);
+            gradients = m_data[i]->clone()->sigmoid_derivative();
+        }
     }
 
-    auto net::train([[maybe_unused]] tensor<>* outputs, [[maybe_unused]] tensor<>* targets, [[maybe_unused]] const dim epochs, [[maybe_unused]] const float learning_rate) -> void {
-        //const auto now {std::chrono::system_clock::now()};
-        //rtml_log_info("Training network with {} epochs and learning rate {}", epochs, learning_rate);
-        //for (dim i {}; i < epochs; ++i) {
-        //    tensor_ref<> output {forward_propagate(outputs)};
-        //    backward_propagate(output, targets);
-        //    if (i % 1000 == 0) {
-        //        const double percent {static_cast<double>(i) / static_cast<double>(epochs) * 100.0};
-        //        rtml_log_info("Epoch {} of {} ({:.01f}%)", i, epochs, percent);
-        //    }
-        //}
-        //rtml_log_info("Training took {} ms", std::chrono::duration_cast<std::chrono::duration<double, std::milli>>(std::chrono::system_clock::now() - now).count());
+    auto net::train(const std::span<tensor<>* const> inputs, const std::span<tensor<>* const> targets, const std::size_t epochs, const float learning_rate) -> void {
+        rtml_assert1(inputs.size() == targets.size());
+        const auto now {std::chrono::system_clock::now()};
+        rtml_log_info("Training network with {} epochs and learning rate {}", epochs, learning_rate);
+        for (std::size_t e {}; e < epochs; ++e) {
+            for (std::size_t i {}; i < inputs.size(); ++i) {
+                auto* const outputs {forward_propagate(inputs[i])};
+                backward_propagate(outputs, targets[i], learning_rate);
+            }
+        }
+        rtml_log_info("Training took {} ms", std::chrono::duration_cast<std::chrono::duration<double, std::milli>>(std::chrono::system_clock::now() - now).count());
     }
 
     auto net::build_forward_graph() -> void {

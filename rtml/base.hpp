@@ -95,6 +95,103 @@ namespace rtml {
     static_assert(k_operands[static_cast<std::size_t>(k_first_binary_op)] == 2);
     static_assert(k_operands[static_cast<std::size_t>(k_first_binary_op)-1] == 1);
     static_assert(k_operands[static_cast<std::size_t>(k_first_binary_op)+1] == 2);
+
+    namespace dtypes {
+        using f32 = float;
+    }
+
+    template <typename S>
+    concept is_dtype = requires {
+        !std::is_pointer_v<S>;
+        !std::is_reference_v<S>;
+        std::is_same_v<S, dtypes::f32>;
+    };
+
+    using dim = std::int64_t; // Dimension scalar used for dims, indices and strides.
+
+    template <typename T> requires is_dtype<T>
+    struct dtype_traits;
+
+    template <>
+    struct dtype_traits<float> {
+        using type = float;
+        static constexpr std::size_t k_size {sizeof(float)};
+        static constexpr std::size_t k_align {alignof(float)};
+        static constexpr std::string_view k_name {"f32"};
+        static constexpr float k_one {1.0f};
+    };
+
+    template <typename T> requires is_dtype<T>
+    class tensor;
+
+     // all validation functions go here
+    namespace validators {
+    #define rtml_verify_un(expr, msg, ...) \
+        if (!(expr)) [[unlikely]] { \
+            rtml_log_error("Graph validation failed: " #expr "\t<-\t" msg, ## __VA_ARGS__); \
+            if (r) rtml_log_error("R: {}", r->to_string(0)); \
+            if (x) rtml_log_error("X: {}", x->to_string(0)); \
+            return false; \
+        }
+        #define rtml_verify_bi(expr, msg, ...) \
+            if (!(expr)) [[unlikely]] { \
+                rtml_log_error("Graph validation failed: " #expr "\t<-\t" msg, ## __VA_ARGS__); \
+                if (r) rtml_log_error("R: {}", r->to_string(0)); \
+                if (x) rtml_log_error("X: {}", x->to_string(0)); \
+                if (y) rtml_log_error("Y: {}", y->to_string(0)); \
+                return false; \
+            }
+
+        template <typename S> requires is_dtype<S>
+        [[nodiscard]] constexpr auto validate_unary_op(
+            const tensor<S>* const r,
+            const tensor<S>* const x
+        ) -> bool {
+            rtml_verify_un(r, "Result tensor is null");
+            rtml_verify_un(x, "Source tensor is null");
+            rtml_verify_un(x->shape().is_dense_except_dim1(), "Source tensor is not dense except dim1");
+            rtml_verify_un(r->shape().is_dense_except_dim1(), "Result tensor is not dense except dim1");
+            rtml_verify_un(r->shape() == x->shape(), "Result tensor shape mismatch");
+            return true;
+        }
+
+        template <typename S> requires is_dtype<S>
+        [[nodiscard]] constexpr auto validate_binary_op(
+            const tensor<S>* const r,
+            const tensor<S>* const x,
+            const tensor<S>* const y
+        ) -> bool {
+            rtml_verify_bi(r, "R is null");
+            rtml_verify_bi(x, "X is null");
+            rtml_verify_bi(y, "Y is null");
+            rtml_verify_bi(x->shape().strides()[0] == dtype_traits<S>::k_size, "X '{}' stride mismatch", x->name());
+            rtml_verify_bi(r->shape().strides()[0] == dtype_traits<S>::k_size, "R '{}' stride mismatch", r->name());
+            //rtml_verify_bi(y->shape().can_repeat_rows(x->shape()), "Y '{}' cannot repeat X '{}'", y->name(), x->name());
+            rtml_verify_bi(x->shape() == r->shape(), "X '{}' shape mismatch with R '{}'", x->name(), r->name());
+            return true;
+        }
+
+        template <typename S> requires is_dtype<S>
+        [[nodiscard]] constexpr auto validate_matmul(
+            const tensor<S>* const r,
+            const tensor<S>* const x,
+            const tensor<S>* const y
+        ) -> bool {
+            rtml_verify_bi(r, "R is null");
+            rtml_verify_bi(x, "X 0 is null");
+            rtml_verify_bi(y, "Y 1 is null");
+            rtml_verify_bi(
+                x->shape().is_matmul_compatible(y->shape()),
+                "X 0 '{}' and Y '{}' are not matmul compatible",
+                x->name(),
+                y->name()
+            );
+            //rtml_verify_bi(!x->shape().is_transposed(), "X '{}' is transposed", x->name());
+            return true;
+        }
+
+        #undef rtml_verify
+    }
 }
 
 // Assert for debug and release builds.
@@ -103,7 +200,7 @@ namespace rtml {
         ::rtml::panic(::fmt::format("{}:{} Assertion failed: " #expr "\t<-\t" msg, __FILE__, __LINE__, ## __VA_ARGS__)); \
     }
 
-#define rtml_assert1(expr) rtml_assert(expr, "")
+#define rtml_assert1(expr) rtml_assert(expr, "Error")
 
 // Assert for debug builds only.
 #if defined(NDEBUG)
