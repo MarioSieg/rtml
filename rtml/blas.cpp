@@ -208,7 +208,7 @@ namespace rtml::blas {
     template <typename S, typename V_OP>
         requires is_dtype<S> && is_vector_op<V_OP, S>
     static auto RTML_AINLINE RTML_HOT blas_tensor_gen_op_unary(
-        const compute_ctx& ctx,
+        [[maybe_unused]] const compute_ctx& ctx,
         tensor<S>& r,
         const tensor<S>& x,
         V_OP&& v_op // Vector OP

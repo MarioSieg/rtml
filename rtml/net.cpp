@@ -17,13 +17,14 @@ namespace rtml {
     }
 
     auto net::forward_propagate(tensor<>* const inputs) -> tensor<>* {
-        rtml_dassert1(inputs->shape().is_vector());
-        tensor<>* current {inputs->clone()};
+        tensor<>* current {inputs};
+        m_data.clear();
+        m_data.emplace_back(current);
         for (std::size_t i {}; i < m_layers.size()-1; ++i) {
-            current = m_weights[i]->clone()->matmul_clone(current)->add(m_biases[i])->sigmoid();
+            current = m_weights[i]->matmul_clone(current)->add(m_biases[i])->sigmoid();
             m_data.emplace_back(current);
         }
-        tensor<>* r {current->transposed_clone()};
+        tensor<>* r {current->clone()};
         rtml_dassert1(r->shape().is_scalar());
         return r;
     }

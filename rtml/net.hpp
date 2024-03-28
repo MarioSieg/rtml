@@ -22,7 +22,7 @@ namespace rtml {
     private:
         auto build_forward_graph() -> void;
         auto build_backward_graph() -> void;
-
+    public:
         [[maybe_unused]] isolate& m_ctx;
         std::vector<dim> m_layers {};
         std::vector<tensor<>*> m_weights {};

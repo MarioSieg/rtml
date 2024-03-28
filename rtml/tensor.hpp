@@ -162,7 +162,7 @@ namespace rtml {
         [[nodiscard]] auto slice_base() const noexcept -> tensor* { return m_slice; }
         [[nodiscard]] auto slice_offset() const noexcept -> std::size_t { return m_slice_offset; }
         [[nodiscard]] auto ptr() const noexcept -> std::uint8_t* { return m_x.u8; }
-        [[nodiscard]] auto data() const noexcept -> std::span<S> { return {reinterpret_cast<S*>(m_x.u8), m_datasize / dtype_traits<S>::k_size}; }
+        [[nodiscard]] auto data() const noexcept -> std::span<S> { return {reinterpret_cast<S*>(m_x.u8), reinterpret_cast<S*>(m_x.u8+m_datasize)}; }
         [[nodiscard]] auto name() const noexcept -> const char* { return m_name.data(); }
 
         [[nodiscard]] auto isomorphic_clone() noexcept -> tensor* {
@@ -230,6 +230,11 @@ namespace rtml {
             return this;
         }
         auto fill_data(const std::span<const S> data) -> tensor* {
+            rtml_assert1(data.size() == static_cast<std::size_t>(m_shape.elem_count()));
+            std::ranges::copy(data, this->data().begin());
+            return this;
+        }
+        auto fill_data(const std::initializer_list<const S> data) -> tensor* {
             rtml_assert1(data.size() == static_cast<std::size_t>(m_shape.elem_count()));
             std::ranges::copy(data, this->data().begin());
             return this;

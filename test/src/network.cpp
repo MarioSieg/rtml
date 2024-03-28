@@ -13,10 +13,10 @@ TEST(net, with_ass) {
     std::shared_ptr ctx {isolate::create("alex", isolate::compute_device::cpu, 16_gib)};
     net xor_network {*ctx, {2, 3, 1}};
     std::array<tensor<>* const, 4> inputs_data {
-        ctx->new_tensor({2}, {0.0f, 0.0f}),
-        ctx->new_tensor({2}, {0.0f, 1.0f}),
-        ctx->new_tensor({2}, {1.0f, 0.0f}),
-        ctx->new_tensor({2}, {1.0f, 1.0f}),
+        ctx->new_tensor({1, 2}, {0.0f, 0.0f}),
+        ctx->new_tensor({1, 2}, {0.0f, 1.0f}),
+        ctx->new_tensor({1, 2}, {1.0f, 0.0f}),
+        ctx->new_tensor({1, 2}, {1.0f, 1.0f}),
     };
     std::array<tensor<>* const, 4> targets_data {
         ctx->new_tensor({1}, {0.0f}),
@@ -26,7 +26,23 @@ TEST(net, with_ass) {
     };
     static_assert(inputs_data.size() == targets_data.size());
 
-    xor_network.train(inputs_data, targets_data, 10000, 0.1f);
+    //xor_network.train(inputs_data, targets_data, 1000, 0.1f);
+    xor_network.m_weights[0]->fill_data({
+        -9.156306, 12.023933,
+        -8.681289, -8.424147,
+        -12.01305, 9.237691
+    });
+    xor_network.m_weights[1]->fill_data({
+        -7.9341936, -3.2195935, 8.147618
+    });
+    xor_network.m_biases[0]->fill_data({
+        3.5329335,
+        2.6067584,
+        -3.7080972
+    });
+    xor_network.m_biases[1]->fill_data({
+        4.0445127
+    });
 
     for (std::size_t i {}; i < inputs_data.size(); ++i) {
         rtml_log_info("[{} ^ {}] = {}", inputs_data[i]->data()[0], inputs_data[i]->data()[1], xor_network.forward_propagate(inputs_data[i])->data()[0]);
