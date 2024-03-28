@@ -10,8 +10,8 @@
 #include <random>
 #include <span>
 
-#include "fixed_vector.hpp"
 #include "tensor_base.hpp"
+#include "blas.hpp"
 
 #include <spdlog/spdlog.h>
 
@@ -30,7 +30,7 @@ namespace rtml {
     constexpr dim k_max_dims {4};
 
     template <const std::size_t dtype_size, const dim lim = k_max_dims>
-        requires (dtype_size > 0) && (dtype_size <= 4) && (lim > 0 && (lim&-255) == 0)
+        requires (dtype_size > 0) && (dtype_size <= 4) && (lim > 0 && (lim&-128) == 0)
     class fixed_shape {
     public:
         constexpr explicit fixed_shape(std::span<const dim> shape) noexcept {
@@ -74,10 +74,7 @@ namespace rtml {
             return !(*this == other);
         }
         [[nodiscard]] constexpr auto is_matmul_compatible(const fixed_shape& other) const noexcept -> bool {
-            static_assert(lim == 4);
-            return m_shape[0] == other.m_shape[0] &&
-                other.m_shape[2] % m_shape[2] == 0 &&
-                other.m_shape[3] % m_shape[3] == 0;
+            return m_shape[1] == other.m_shape[0];
         }
         [[nodiscard]] constexpr auto is_transposed() const noexcept -> bool {
             return m_strides[0] > m_strides[1];
@@ -120,6 +117,12 @@ namespace rtml {
         [[nodiscard]] constexpr auto offset(const std::array<dim, lim>& indices) const noexcept -> std::size_t {
             return std::inner_product(indices.cbegin(), indices.cend(), m_strides.cbegin(), 0);
         }
+        constexpr auto transpose(fixed_shape& other) noexcept -> void {
+            m_shape[0] = other.m_shape[1];
+            m_shape[1] = other.m_shape[0];
+            m_strides[0] = other.m_strides[1];
+            m_strides[1] = other.m_strides[0];
+        }
 
     private:
         std::uint32_t m_rank {}; // Number of dimensions (1-k_max_dims)
@@ -146,12 +149,9 @@ namespace rtml {
         [[nodiscard]] auto shape() const noexcept -> const fixed_shape<sizeof(S)>& { return m_shape; }
         [[nodiscard]] auto slice_base() const noexcept -> tensor* { return m_slice; }
         [[nodiscard]] auto slice_offset() const noexcept -> std::size_t { return m_slice_offset; }
-        [[nodiscard]] auto operands() noexcept -> fixed_vector<const tensor*, k_max_operands>& { return m_operands; }
-        [[nodiscard]] auto operands() const noexcept -> const fixed_vector<const tensor*, k_max_operands>& { return m_operands; }
         [[nodiscard]] auto ptr() const noexcept -> std::uint8_t* { return m_x.u8; }
         [[nodiscard]] auto data() const noexcept -> std::span<S> { return {reinterpret_cast<S*>(m_x.u8), m_datasize / dtype_traits<S>::k_size}; }
         [[nodiscard]] auto name() const noexcept -> const char* { return m_name.data(); }
-        [[nodiscard]] auto opcode() const noexcept -> opcode { return m_op; }
 
         [[nodiscard]] auto isomorphic_clone() noexcept -> tensor* {
             auto* const ts {m_ctx.new_tensor<S>(m_shape.used_dims())};
@@ -165,13 +165,33 @@ namespace rtml {
               this,
               0
             )};
-            std::ranges::copy(m_shape.strides().cbegin(), m_shape.strides().cend(), ts->m_strides.begin());
+            std::ranges::copy(
+               m_shape.strides().cbegin(),
+               m_shape.strides().cend(),
+               const_cast<std::array<dim, k_max_dims>&>(ts->shape().strides()).begin()
+            );
             if constexpr (k_clone_set_name)
                 ts->format_name("{} (slice)", m_name.data());
             return ts;
         }
+        [[nodiscard]] auto transposed_clone() noexcept -> tensor* {
+            auto* const ts {m_ctx.new_tensor<S>(
+              m_shape.used_dims(),
+              this,
+              0
+            )};
+            std::ranges::copy(
+                m_shape.strides().cbegin(),
+                m_shape.strides().cend(),
+                const_cast<std::array<dim, k_max_dims>&>(ts->shape().strides()).begin()
+            );
+            if constexpr (k_clone_set_name)
+                ts->format_name("{} (transposed)", m_name.data());
+            ts->m_shape.transpose(m_shape);
+            return ts;
+        }
         [[nodiscard]] auto clone() noexcept -> tensor* {
-            auto* const ts {m_ctx.new_tensor(m_shape.used_dims())};
+            auto* const ts {m_ctx.new_tensor<S>(m_shape.used_dims())};
             std::ranges::copy(data(), ts->data().begin());
             if constexpr (k_clone_set_name)
                 ts->format_name("{} (clone)", m_name.data());
@@ -198,10 +218,49 @@ namespace rtml {
             return this;
         }
         auto fill_data(const std::span<const S> data) -> tensor* {
-            rtml_dassert1(data.size() == m_shape.elem_count());
+            rtml_assert1(data.size() == static_cast<std::size_t>(m_shape.elem_count()));
             std::ranges::copy(data, this->data().begin());
             return this;
         }
+
+        [[nodiscard]] auto add(const tensor* other) noexcept -> tensor* {
+            blas::compute_ctx ctx {};
+            blas::add(ctx, *this, *this, *other);
+            return this;
+        }
+
+        [[nodiscard]] auto sub(const tensor* other) noexcept -> tensor* {
+            blas::compute_ctx ctx {};
+            blas::sub(ctx, *this, *this, *other);
+            return this;
+        }
+
+        [[nodiscard]] auto mul(const tensor* other) noexcept -> tensor* {
+            blas::compute_ctx ctx {};
+            blas::mul(ctx, *this, *this, *other);
+            return this;
+        }
+
+        [[nodiscard]] auto div(const tensor* other) noexcept -> tensor* {
+            blas::compute_ctx ctx {};
+            blas::div(ctx, *this, *this, *other);
+            return this;
+        }
+
+        [[nodiscard]] auto matmul_clone(const tensor* other) noexcept -> tensor* {
+            blas::compute_ctx ctx {};
+            tensor* const r {m_ctx.new_tensor<S>({m_shape.dims()[0], other->m_shape.dims()[1]})};
+            blas::matmul(ctx, *r, *this, *other);
+            return r;
+        }
+
+        [[nodiscard]] auto sigmoid() noexcept -> tensor* {
+            blas::compute_ctx ctx {};
+            blas::sigmoid(ctx, *this, *this);
+            return this;
+        }
+
+#if 0
         template <typename... Ops>
             requires (sizeof...(Ops) <= k_max_operands)
                 && ((sizeof...(Ops) > 0) || (std::is_same_v<std::remove_cvref_t<Ops>, tensor*> && ...))
@@ -214,6 +273,7 @@ namespace rtml {
             }};
             return emit_op(*isomorphic_clone(), this, ops...);
         }
+#endif
 
         [[nodiscard]] auto operator()(const std::array<dim, k_max_dims>& indices) const noexcept -> S& {
             return *reinterpret_cast<S*>(m_x.u8+m_shape.offset(indices));
@@ -256,9 +316,10 @@ namespace rtml {
             std::string fmt {};
             fmt.reserve(0x100+sizeof("2.000")*with_data_elems);
             fmt += fmt::format(
-                "Tensor {}{}{} * {}D, Shape [{} X {} X {} X {}], Strides [{}B X {}B X {}B X {}B] {:.01f}{}",
+                "Tensor {}{}{}{} * {}D, Shape [{} X {} X {} X {}], Strides [{}B X {}B X {}B X {}B] {:.01f}{}",
+                m_name[0] ? "'" : "",
                 m_name.data(),
-                m_name[0] ? ": " : "",
+                m_name[0] ? "': " : "",
                 dtype_traits<S>::k_name,
                 m_shape.rank(),
                 m_shape.dims()[0],
@@ -329,59 +390,11 @@ namespace rtml {
         std::array<char, k_max_name> m_name {}; // Tensor name - cannot use std::string because we must be trivially destructable
         std::size_t m_datasize {}; // Tensor data size in bytes
         class fixed_shape<sizeof(S)> m_shape; // Tensor shape
-        enum opcode m_op {opcode::nop}; // Operation code
-        fixed_vector<const tensor*, k_max_operands> m_operands {}; // Tensor operation operands
         tensor* m_slice {}; // Sliced base tensor, if any
         std::size_t m_slice_offset {}; // Memory offset into sliced base tensor's data
         union {
             float* f32;
             std::uint8_t* u8 {};
         } m_x {};
-    };
-
-    template <typename S = dtypes::f32> requires is_dtype<S>
-    class tensor_ref final {
-    public:
-        constexpr tensor_ref() noexcept = default;
-        constexpr tensor_ref(tensor<S>* const t) noexcept : m_t{t} {}
-        auto operator * () const noexcept -> tensor<S>& { return *m_t; }
-        auto operator -> () const noexcept -> tensor<S>* { return m_t; }
-        auto operator + (const tensor_ref& other) const noexcept -> tensor_ref {
-            return m_t->op(opcode::add, other.m_t);
-        }
-        auto operator - (const tensor_ref& other) const noexcept -> tensor_ref {
-            return m_t->op(opcode::sub, other.m_t);
-        }
-        auto operator * (const tensor_ref& other) const noexcept -> tensor_ref {
-            return m_t->op(opcode::mul, other.m_t);
-        }
-        auto operator / (const tensor_ref& other) const noexcept -> tensor_ref {
-            return m_t->op(opcode::div, other.m_t);
-        }
-        auto operator & (const tensor_ref& other) const noexcept -> tensor_ref {
-            return m_t->op(opcode::matmul, other.m_t);
-        }
-        auto softmax() const noexcept -> tensor_ref {
-            return m_t->op(opcode::softmax);
-        }
-        auto sigmoid() const noexcept -> tensor_ref {
-            return m_t->op(opcode::sigmoid);
-        }
-        auto tanh() const noexcept -> tensor_ref {
-            return m_t->op(opcode::tanh);
-        }
-        auto relu() const noexcept -> tensor_ref {
-            return m_t->op(opcode::relu);
-        }
-        auto gelu() const noexcept -> tensor_ref {
-            return m_t->op(opcode::gelu);
-        }
-        auto silu() const noexcept -> tensor_ref {
-            return m_t->op(opcode::silu);
-        }
-
-
-    private:
-        tensor<S>* m_t {};
     };
 }

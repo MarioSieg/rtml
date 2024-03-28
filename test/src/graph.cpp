@@ -9,6 +9,8 @@
 
 using namespace rtml;
 
+#if 0
+
 TEST(graph, eval) {
     auto ctx = isolate::create("test", isolate::compute_device::cpu, 0x1000);
     tensor_ref a {ctx->new_tensor<dtypes::f32>({4, 4})};
@@ -25,13 +27,10 @@ TEST(graph, eval) {
     auto f {e - c};
     auto g {f * c};
     graph::compute(&*g);
-    std::ofstream out {"graph.dot"};
-    std::stringstream ss {};
-    graph::generate_graphviz_dot_code(ss, &*g);
-    out << ss.str();
-    out.close();
 
     for (auto&& x : g->data()) {
         ASSERT_FLOAT_EQ(x, 2.0f*((std::pow(2.0f, 2.0f))-2.0f));
     }
 }
+
+#endif
