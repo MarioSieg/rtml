@@ -370,7 +370,7 @@ namespace rtml {
                         fmt.push_back('\t');
                         for (dim i1 {}; i1 < m_shape.dims()[0]; ++i1) {
                             const S x {reinterpret_cast<S&>(m_x.u8[dtype_traits<S>::k_size*(i3*m_shape.dims()[1]*m_shape.dims()[0] + i2*m_shape.dims()[0] + i1)])};
-                            fmt += fmt::format("{:.03f} ", x);
+                            fmt += fmt::format("{} ", x);
                         }
                         fmt.push_back('\n');
                     }

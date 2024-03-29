@@ -17,7 +17,7 @@ namespace rtml {
     }
 
     auto net::forward_propagate(tensor<>* const inputs) -> tensor<>* {
-        tensor<>* current {inputs};
+        tensor<>* current {inputs->transposed_clone()};
         m_data.clear();
         m_data.emplace_back(current);
         for (std::size_t i {}; i < m_layers.size()-1; ++i) {

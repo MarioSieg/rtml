@@ -28,20 +28,21 @@ TEST(net, with_ass) {
 
     //xor_network.train(inputs_data, targets_data, 1000, 0.1f);
     xor_network.m_weights[0]->fill_data({
-        -9.156306, 12.023933,
-        -8.681289, -8.424147,
-        -12.01305, 9.237691
+        -10.717363, 12.901953,
+        -12.893378, 10.766185,
+        7.996292, 7.883656
     });
+    xor_network.m_weights[0]->print();
     xor_network.m_weights[1]->fill_data({
-        -7.9341936, -3.2195935, 8.147618
+        -8.779381, 8.894791, 2.550912
     });
     xor_network.m_biases[0]->fill_data({
-        3.5329335,
-        2.6067584,
-        -3.7080972
+        4.659018,
+        -4.75997,
+        -2.5025623
     });
     xor_network.m_biases[1]->fill_data({
-        4.0445127
+        1.9633493
     });
 
     for (std::size_t i {}; i < inputs_data.size(); ++i) {
