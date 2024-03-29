@@ -365,14 +365,16 @@ namespace rtml {
             );
             if (with_data_elems > 0) {
                 fmt += "\n[\n";
-                for (dim i3 {}; i3 < m_shape.dims()[2]; ++i3) {
-                    for (dim i2 {}; i2 < m_shape.dims()[1]; ++i2) {
-                        fmt.push_back('\t');
-                        for (dim i1 {}; i1 < m_shape.dims()[0]; ++i1) {
-                            const S x {reinterpret_cast<S&>(m_x.u8[dtype_traits<S>::k_size*(i3*m_shape.dims()[1]*m_shape.dims()[0] + i2*m_shape.dims()[0] + i1)])};
-                            fmt += fmt::format("{} ", x);
+                for (dim i4 {}; i4 < m_shape.dims()[3]; ++i4) {
+                    for (dim i3 {}; i3 < m_shape.dims()[2]; ++i3) {
+                        for (dim i2 {}; i2 < m_shape.dims()[1]; ++i2) {
+                            fmt.push_back('\t');
+                            for (dim i1 {}; i1 < m_shape.dims()[0]; ++i1) {
+                                const S x {(*this)({i1, i2, i3, i4})};
+                                fmt += fmt::format("{} ", x);
+                            }
+                            fmt.push_back('\n');
                         }
-                        fmt.push_back('\n');
                     }
                 }
                 fmt += "\t...\n]";
